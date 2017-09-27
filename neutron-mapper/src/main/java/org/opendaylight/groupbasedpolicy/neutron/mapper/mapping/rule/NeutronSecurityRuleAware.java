@@ -361,6 +361,11 @@ public class NeutronSecurityRuleAware implements NeutronAware<SecurityRule> {
 
     @Override
     public void onDeleted(SecurityRule deletedSecRule, Neutron oldNeutron, Neutron newNeutron) {
+        if (deletedSecRule.getTenantId() == null) {
+            LOG.warn("Skip deleting SecRule {} because TenantId is null.", deletedSecRule);
+            // TODO This needs to be reworked, SecGroups shouldn't use TenantId, Neutron doesn't always configure it
+            return;
+        }
         LOG.trace("deleted securityRule - {}", deletedSecRule);
         ReadWriteTransaction rwTx = dataProvider.newReadWriteTransaction();
         boolean isNeutronSecurityRuleDeleted = deleteNeutronSecurityRule(deletedSecRule, oldNeutron, rwTx);

@@ -60,7 +60,7 @@ public class NeutronSecurityGroupAware implements NeutronAware<SecurityGroup> {
         ruleAware.flushPendingSecurityRulesFor(createdSecGroup.getKey(), neutron);
     }
 
-    public boolean addNeutronSecurityGroup(SecurityGroup secGroup, ReadWriteTransaction rwTx) {
+    boolean addNeutronSecurityGroup(SecurityGroup secGroup, ReadWriteTransaction rwTx) {
         if (secGroup.getTenantId() == null) {
             LOG.warn("Skip processing group {} because TenantId is null.", secGroup);
             // TODO This needs to be reworked, SecGroups shouldn't use TenantId, Neutron doesn't always configure it
@@ -96,15 +96,18 @@ public class NeutronSecurityGroupAware implements NeutronAware<SecurityGroup> {
 
     @Override
     public void onDeleted(SecurityGroup deletedSecGroup, Neutron oldNeutron, Neutron newNeutron) {
+        if (deletedSecGroup.getTenantId() == null) {
+            LOG.warn("Skip deleting SecGroup {} because TenantId is null.", deletedSecGroup);
+            // TODO This needs to be reworked, SecGroups shouldn't use TenantId, Neutron doesn't always configure it
+            return;
+        }
         LOG.trace("deleted securityGroup - {}", deletedSecGroup);
         if (newNeutron != null && newNeutron.getSecurityRules() != null
                 && newNeutron.getSecurityRules().getSecurityRule() != null
                 && newNeutron.getSecurityRules()
                     .getSecurityRule()
                     .stream()
-                    .filter(sr -> sr.getSecurityGroupId().equals(deletedSecGroup.getUuid()))
-                    .findAny()
-                    .isPresent()) {
+                    .anyMatch(sr -> sr.getSecurityGroupId().equals(deletedSecGroup.getUuid()))) {
             LOG.warn("Cannot remove security group {} before removing last security rule.", deletedSecGroup.getKey());
             ruleAware.addPendingDeletedSecGroup(deletedSecGroup);
             return;

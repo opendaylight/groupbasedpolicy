@@ -80,7 +80,7 @@ public class NetworkAware implements MappingProvider<Network> {
         bridgeDomainBuilder.setId(network.getUuid().getValue());
         NetworkProviderExtension providerAug = network.getAugmentation(NetworkProviderExtension.class);
         if (providerAug == null || providerAug.getNetworkType() == null) {
-            LOG.error("Cannot create VPP bridge domain. Network type not specified in neutron network: {}", network);
+            LOG.warn("Cannot create VPP bridge domain. Network type not specified in neutron network: {}", network);
             return null;
         }
         Class<? extends NetworkTypeBase> netType = convertNetworkType(providerAug.getNetworkType());
