@@ -157,6 +157,11 @@ public class NeutronSecurityRuleAware implements NeutronAware<SecurityRule> {
 
     public boolean addNeutronSecurityRuleWithAction(SecurityRule secRule, Neutron neutron, ActionChoice action,
             ReadWriteTransaction rwTx) {
+        if (secRule.getTenantId() == null) {
+            LOG.warn("Skip processing rule {} because TenantId is null.", secRule);
+            // TODO This needs to be reworked, SecRules shouldn't use TenantId, Neutron doesn't always configure it
+            return true;
+        }
         TenantId tenantId = new TenantId(secRule.getTenantId().getValue());
         Uuid providerSecGroupId = secRule.getSecurityGroupId();
         EndpointGroupId providerEpgId = new EndpointGroupId(providerSecGroupId.getValue());
