@@ -111,6 +111,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.r
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.interests.followed.tenants.FollowedTenantKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.interests.followed.tenants.followed.tenant.FollowedEndpointGroup;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.interests.followed.tenants.followed.tenant.FollowedEndpointGroupKey;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.endpoints.AddressEndpointWithLocationKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.statistics.store.rev151215.StatisticsStore;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.statistics.store.rev151215.statistics.store.StatisticRecord;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.statistics.store.rev151215.statistics.store.StatisticRecordKey;
@@ -378,6 +379,12 @@ public class IidFactory {
             .child(AddressEndpoints.class)
             .child(AddressEndpoint.class, addressEndpointKey)
             .build();
+    }
+
+    public static InstanceIdentifier<AddressEndpointLocation> addressEndpointLocationIid(
+            AddressEndpointWithLocationKey key) {
+        return addressEndpointLocationIid(new AddressEndpointLocationKey(key.getAddress(), key.getAddressType(),
+                key.getContextId(), key.getContextType()));
     }
 
     public static InstanceIdentifier<AddressEndpointLocation> addressEndpointLocationIid(

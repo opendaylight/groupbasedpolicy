@@ -25,13 +25,14 @@ import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.api.BridgeDomainManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.commands.DhcpRelayCommand;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.commands.NatInstanceCommand.NatInstanceCommandBuilder;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.commands.RoutingCommand;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.config.ConfigUtil;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.dhcp.DhcpRelayHandler;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.iface.InterfaceManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.LispStateManager;
-import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.loopback.LoopbackManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.flat.overlay.FlatOverlayManager;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.loopback.LoopbackManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.mappers.NeutronTenantToVniMapper;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.nat.NatManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.nat.NatUtil;
@@ -62,6 +63,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.rev160427.NetworkDomain;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.rev160427.forwarding.fields.Parent;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.NatAddressRenderer;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.RendererPolicy;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.Configuration;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.Endpoints;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.RendererForwarding;
@@ -92,7 +94,11 @@ import org.slf4j.LoggerFactory;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
+import com.google.common.collect.HashBasedTable;
+import com.google.common.collect.ImmutableTable;
+import com.google.common.collect.Lists;
 import com.google.common.collect.SetMultimap;
 import com.google.common.collect.Table;
 
@@ -389,90 +395,89 @@ public final class ForwardingManager {
         return java.util.Optional.empty();
     }
 
-    void syncNatEntries(PolicyContext policyCtx) {
-        Configuration cfg = policyCtx.getPolicy().getConfiguration();
-        if(cfg != null) {
-            final List<MappingEntryBuilder> sNatEntries = resolveStaticNatTableEntries(cfg.getEndpoints());
-            LOG.trace("Syncing static NAT entries {}", sNatEntries);
-            if (cfg.getRendererForwarding() != null) {
-                for (RendererForwardingByTenant fwd : cfg.getRendererForwarding().getRendererForwardingByTenant()) {
-                    List<InstanceIdentifier<PhysicalInterface>> physIfacesIid =
-                        resolvePhysicalInterfacesForNat(fwd.getRendererNetworkDomain());
-                    natManager.submitNatChanges(physIfacesIid, sNatEntries, policyCtx, true);
+    private static Optional<Endpoints> checkEndpoints(PolicyContext ctx) {
+        Optional<PolicyContext> contextOptional = Optional.fromNullable(ctx);
+        if (contextOptional.isPresent()) {
+            Optional<RendererPolicy> policyOptional = Optional.fromNullable(contextOptional.get().getPolicy());
+            if (policyOptional.isPresent()) {
+                Optional<Configuration> configOptional = Optional.fromNullable(policyOptional.get().getConfiguration());
+                if (configOptional.isPresent()) {
+                    return Optional.fromNullable(configOptional.get().getEndpoints());
                 }
             }
-        }
-    }
-
-    void deleteNatEntries(PolicyContext policyCtx) {
-        Configuration cfg = policyCtx.getPolicy().getConfiguration();
-        if(cfg != null) {
-            List<MappingEntryBuilder> natEntries = resolveStaticNatTableEntries(cfg.getEndpoints());
-            if (natEntries.isEmpty()) {
-                LOG.trace("NAT entries are empty,nothing to delete, skipping processing.");
-                return;
-            }
-            LOG.trace("Deleting NAT entries {}", natEntries);
-            if (cfg.getRendererForwarding() != null) {
-                for (RendererForwardingByTenant fwd : cfg.getRendererForwarding().getRendererForwardingByTenant()) {
-                    List<InstanceIdentifier<PhysicalInterface>> physIfacesIid =
-                        resolvePhysicalInterfacesForNat(fwd.getRendererNetworkDomain());
-                    natManager.submitNatChanges(physIfacesIid, natEntries, policyCtx, false);
-                }
-            }
-        }
-    }
-
-    private List<InstanceIdentifier<PhysicalInterface>> resolvePhysicalInterfacesForNat(
-        List<RendererNetworkDomain> rendNetDomains) {
-        List<InstanceIdentifier<PhysicalInterface>> physIfaces = new ArrayList<>();
-        for (RendererNetworkDomain rendDomain : rendNetDomains) {
-            Optional<IpPrefix> resolvedIpPrefix = resolveIpPrefix(rendDomain);
-            if (resolvedIpPrefix.isPresent()) {
-                Optional<InstanceIdentifier<PhysicalInterface>> resPhIface =
-                    NatUtil.resolvePhysicalInterface(resolvedIpPrefix.get(), dataBroker.newReadOnlyTransaction());
-                if (resPhIface.isPresent()) {
-                    physIfaces.add(resPhIface.get());
-                }
-            }
-        }
-        return physIfaces;
-    }
-
-    private Optional<IpPrefix> resolveIpPrefix(RendererNetworkDomain rendDomain) {
-        SubnetAugmentRenderer subnetAug = rendDomain.getAugmentation(SubnetAugmentRenderer.class);
-        if (subnetAug.getSubnet() != null) {
-            return Optional.of(subnetAug.getSubnet().getIpPrefix());
         }
         return Optional.absent();
     }
 
-    private List<MappingEntryBuilder> resolveStaticNatTableEntries(Endpoints endpoints) {
-        List<MappingEntryBuilder> sNatEntries = new ArrayList<>();
-        for (AddressEndpointWithLocation addrEp : endpoints.getAddressEndpointWithLocation()) {
-            if (addrEp.getAugmentation(NatAddressRenderer.class) == null) {
-                continue;
+
+    void createNatEntries(@Nonnull PolicyContext after) {
+        LOG.info("Resolving NAT for cfg version {}", after.getPolicy().getVersion());
+        Preconditions.checkArgument(checkEndpoints(after).isPresent());
+        final Table<NodeId, Long, List<MappingEntryBuilder>> staticEntries =
+                resolveStaticNatTableEntries(checkEndpoints(after).get());
+        Map<NodeId, NatInstanceCommandBuilder> natByNode = natManager.staticEntries(staticEntries);
+        natManager.dynamicEntries(after, natByNode);
+        natManager.submitNatChanges(natByNode);
+    }
+
+    void syncNatEntries(@Nonnull PolicyContext before,@Nonnull PolicyContext after) {
+        LOG.info("Syncing NAT entries for version {}", after.getPolicy().getVersion());
+        Optional<Endpoints> endpointsBeforeOptional = checkEndpoints(before);
+
+        Endpoints endpointsAfter = null;
+        Optional<Endpoints> endpointsAfterOptional = checkEndpoints(after);
+        if (endpointsAfterOptional != null && endpointsAfterOptional.isPresent()) {
+            endpointsAfter = endpointsAfterOptional.get();
+        }
+
+        if (endpointsBeforeOptional.isPresent()) {
+            natManager.clearNodes(endpointsBeforeOptional.get(), endpointsAfter);
+        }
+
+        if (endpointsAfter != null) {
+            createNatEntries(after);
+        }
+    }
+
+    void deleteNatEntries(@Nonnull PolicyContext before) {
+        Optional<Endpoints> endpointsBeforeOptional = checkEndpoints(before);
+        if (endpointsBeforeOptional.isPresent()) {
+            natManager.clearNodes(endpointsBeforeOptional.get(), null);
+        }
+    }
+
+    private ImmutableTable<NodeId, Long, List<MappingEntryBuilder>> resolveStaticNatTableEntries(
+            @Nonnull Endpoints endpoints) {
+        Table<NodeId, Long, List<MappingEntryBuilder>> resultBuilder = HashBasedTable.create();
+        List<Predicate<AddressEndpointWithLocation>> filter = Lists.newArrayList();
+        filter.add(ep -> ep.getAugmentation(NatAddressRenderer.class) != null);
+        filter.add(ep -> resolveEpIpAddressForSnat(ep) != null);
+        filter.add(ep -> ep.getAbsoluteLocation() != null);
+        filter.add(ep -> ep.getAbsoluteLocation().getLocationType() instanceof ExternalLocationCase);
+        filter.add(ep -> ep.getAugmentation(NatAddressRenderer.class) != null);
+        filter.add(ep -> ep.getAugmentation(NatAddressRenderer.class).getNatAddress() != null);
+        filter.add(ep -> ep.getAugmentation(NatAddressRenderer.class).getNatAddress().getIpv4Address() != null);
+
+        endpoints.getAddressEndpointWithLocation().forEach(addrEp -> {
+            if (!filter.stream().allMatch(f -> f.apply(addrEp))) {
+                return;
             }
             String endpointIP = resolveEpIpAddressForSnat(addrEp);
-
-            if (endpointIP == null) {
-                LOG.warn("Endpoints {} IP cannot be null, skipping processing of SNAT", addrEp);
-                continue;
-            }
-
             NatAddressRenderer natAddr = addrEp.getAugmentation(NatAddressRenderer.class);
-            if (natAddr.getNatAddress() == null && natAddr.getNatAddress().getIpv4Address() == null) {
-                LOG.warn("Only Ipv4 SNAT is currently supported. Cannot apply SNAT for [{},{}]", endpointIP,
-                        natAddr.getNatAddress());
-                continue;
-            }
-            Optional<MappingEntryBuilder> entry = natManager.resolveSnatEntry(endpointIP, natAddr.getNatAddress()
-                .getIpv4Address());
+            NodeId nodeId = ((ExternalLocationCase) addrEp.getAbsoluteLocation().getLocationType())
+                .getExternalNodeMountPoint().firstKeyOf(Node.class).getNodeId();
+            Optional<MappingEntryBuilder> entry =
+                    NatUtil.createStaticEntry(endpointIP, natAddr.getNatAddress().getIpv4Address());
             if (entry.isPresent()) {
-                sNatEntries.add(entry.get());
+                long tenantId = flatOverlayManager.getVni(addrEp.getTenant().getValue());
+                if (resultBuilder.get(nodeId, tenantId) != null) {
+                    resultBuilder.get(nodeId, tenantId).add(entry.get());
+                } else {
+                    resultBuilder.put(nodeId, tenantId, Lists.newArrayList(entry.get()));
+                }
             }
-        }
-        return sNatEntries;
+        });
+        return ImmutableTable.copyOf(resultBuilder);
     }
 
     private String resolveEpIpAddressForSnat(AddressEndpointWithLocation addrEp) {
@@ -538,7 +543,6 @@ public final class ForwardingManager {
                 if (fwd == null) {
                     continue;
                 }
-
                 List<InstanceIdentifier<PhysicalInterface>>
                     physIfacesIid = resolvePhysicalInterfacesForNat(fwd.getRendererNetworkDomain());
                 Map<InstanceIdentifier<Node>, RoutingCommand> routingCommandMap =
@@ -550,6 +554,30 @@ public final class ForwardingManager {
                 });
             }
         }
+    }
+
+    List<InstanceIdentifier<PhysicalInterface>> resolvePhysicalInterfacesForNat(
+            List<RendererNetworkDomain> rendNetDomains) {
+            List<InstanceIdentifier<PhysicalInterface>> physIfaces = new ArrayList<>();
+            for (RendererNetworkDomain rendDomain : rendNetDomains) {
+                Optional<IpPrefix> resolvedIpPrefix = resolveIpPrefix(rendDomain);
+                if (resolvedIpPrefix.isPresent()) {
+                    List<InstanceIdentifier<PhysicalInterface>> resPhIface =
+                        NatUtil.resolvePhysicalInterface(resolvedIpPrefix.get(), dataBroker.newReadOnlyTransaction());
+                    if (!resPhIface.isEmpty()) {
+                        physIfaces.addAll(resPhIface);
+                    }
+                }
+            }
+            return physIfaces;
+        }
+
+    public static Optional<IpPrefix> resolveIpPrefix(RendererNetworkDomain rendDomain) {
+        SubnetAugmentRenderer subnetAug = rendDomain.getAugmentation(SubnetAugmentRenderer.class);
+        if (subnetAug.getSubnet() != null) {
+            return Optional.of(subnetAug.getSubnet().getIpPrefix());
+        }
+        return Optional.absent();
     }
 
     List<DhcpRelayCommand> createDhcpRelay(RendererForwarding rendererForwarding,

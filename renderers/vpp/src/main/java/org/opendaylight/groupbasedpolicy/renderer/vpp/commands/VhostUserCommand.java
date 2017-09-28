@@ -10,11 +10,18 @@ package org.opendaylight.groupbasedpolicy.renderer.vpp.commands;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
+
+import org.opendaylight.groupbasedpolicy.renderer.vpp.config.ConfigUtil;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.General;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.General.Operations;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.interfaces.rev140508.interfaces.Interface;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.interfaces.rev140508.interfaces.InterfaceBuilder;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.interfaces.rev140508.interfaces.InterfaceKey;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang._interface.nat.rev170816.NatInterfaceAugmentation;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang._interface.nat.rev170816.NatInterfaceAugmentationBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang._interface.nat.rev170816._interface.nat.attributes.Nat;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang._interface.nat.rev170816._interface.nat.attributes.NatBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang._interface.nat.rev170816._interface.nat.attributes.nat.InboundBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev170607.VhostUserRole;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev170607.VppInterfaceAugmentation;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev170607.VppInterfaceAugmentationBuilder;
@@ -34,6 +41,7 @@ public class VhostUserCommand extends AbstractInterfaceCommand {
         this.socket = builder.getSocket();
         this.role = builder.getRole();
         this.enabled = builder.isEnabled();
+        this.snatEnabled = builder.isSnatEnabled();
         this.description = builder.getDescription();
         this.bridgeDomain = builder.getBridgeDomain();
         this.enableProxyArp = builder.getEnableProxyArp();
@@ -55,13 +63,13 @@ public class VhostUserCommand extends AbstractInterfaceCommand {
     @Override
     public InterfaceBuilder getInterfaceBuilder() {
         InterfaceBuilder interfaceBuilder =
-                new InterfaceBuilder().setKey(new InterfaceKey(name))
-                        .setEnabled(enabled)
-                        .setDescription(description)
-                        .setType(
-                            org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev170607.VhostUser.class)
-                        .setName(name)
-                        .setLinkUpDownTrapEnable(Interface.LinkUpDownTrapEnable.Enabled);
+            new InterfaceBuilder().setKey(new InterfaceKey(name))
+                .setEnabled(enabled)
+                .setDescription(description)
+                .setType(
+                    org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev170607.VhostUser.class)
+                .setName(name)
+                .setLinkUpDownTrapEnable(Interface.LinkUpDownTrapEnable.Enabled);
 
         // Create the vhost augmentation
         VppInterfaceAugmentationBuilder vppAugmentationBuilder = new VppInterfaceAugmentationBuilder()
@@ -75,7 +83,13 @@ public class VhostUserCommand extends AbstractInterfaceCommand {
             vppAugmentationBuilder.setL2(new L2Builder()
                     .setInterconnection(new BridgeBasedBuilder().setBridgeDomain(bridgeDomain).build()).build());
         }
-
+        if (snatEnabled) {
+            Nat nat = new NatBuilder().setInbound(new InboundBuilder()
+                    .setNat44Support(true)
+                    .setPostRouting(ConfigUtil.getInstance().isL3FlatEnabled()).build()).build();
+            interfaceBuilder.addAugmentation(NatInterfaceAugmentation.class,
+                    new NatInterfaceAugmentationBuilder().setNat(nat).build());
+        }
         interfaceBuilder.addAugmentation(VppInterfaceAugmentation.class, vppAugmentationBuilder.build());
         addEnableProxyArpAugmentation(interfaceBuilder);
         return interfaceBuilder;
@@ -85,7 +99,8 @@ public class VhostUserCommand extends AbstractInterfaceCommand {
     public String toString() {
         return "VhostUserCommand [socket=" + socket + ", role=" + role + ", bridgeDomain=" + bridgeDomain
                 + ", operation=" + operation + ", name=" + name + ", description=" + description + ", enabled="
-                + enabled + "]";
+                + enabled + ", enableProxyArp=" + enableProxyArp + ", vrfId=" + vrfId + ", snatEnabled=" + snatEnabled
+            + "]";
     }
 
     public static class VhostUserCommandBuilder {
@@ -99,6 +114,7 @@ public class VhostUserCommand extends AbstractInterfaceCommand {
         private String bridgeDomain;
         private Boolean enableProxyArp;
         private Long vrfId;
+        private boolean snatEnabled;
 
         public String getName() {
             return name;
@@ -142,6 +158,15 @@ public class VhostUserCommand extends AbstractInterfaceCommand {
 
         VhostUserCommandBuilder setEnabled(boolean enabled) {
             this.enabled = enabled;
+            return this;
+        }
+
+        boolean isSnatEnabled() {
+            return snatEnabled;
+        }
+
+        public VhostUserCommandBuilder setSnatEnabled(boolean snatEnabled) {
+            this.snatEnabled = snatEnabled;
             return this;
         }
 

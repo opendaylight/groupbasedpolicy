@@ -24,6 +24,7 @@ import org.opendaylight.controller.md.sal.common.api.data.TransactionCommitFaile
 import org.opendaylight.controller.sal.binding.api.BindingAwareBroker;
 import org.opendaylight.controller.sal.binding.api.BindingAwareProvider;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.api.BridgeDomainManager;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.config.ConfigUtil;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.dhcp.DhcpRelayHandler;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.iface.InterfaceManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.LispStateManager;
@@ -35,6 +36,8 @@ import org.opendaylight.groupbasedpolicy.renderer.vpp.listener.RendererPolicyLis
 import org.opendaylight.groupbasedpolicy.renderer.vpp.listener.VppEndpointListener;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.listener.VppNodeListener;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.manager.VppNodeManager;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.nat.CentralizedNatImpl;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.nat.DvrNatImpl;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.nat.NatManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.policy.BridgeDomainManagerImpl;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.policy.ForwardingManager;
@@ -153,7 +156,10 @@ public class VppRenderer implements AutoCloseable, BindingAwareProvider {
 
         interfaceManager = new InterfaceManager(mountDataProvider, dataBroker, flatOverlayManager);
         AclManager aclManager = new AclManager(mountDataProvider, interfaceManager);
-        NatManager natManager = new NatManager(dataBroker, mountDataProvider);
+        NatManager natManager =
+            (ConfigUtil.getInstance().isL3FlatEnabled()) ? new DvrNatImpl(dataBroker) : new CentralizedNatImpl(
+                dataBroker);
+        LOG.info("Instantiated NAT manager implementation {}", natManager.getClass());
         subnetEventManager = new GbpSubnetEventManager(loopbackManager);
         dtoEventBus.register(interfaceManager);
         dtoEventBus.register(subnetEventManager);
@@ -163,7 +169,8 @@ public class VppRenderer implements AutoCloseable, BindingAwareProvider {
         ForwardingManager fwManager =
                 new ForwardingManager(interfaceManager, aclManager, natManager, routingManager, bdManager,
                         lispStateManager, loopbackManager, flatOverlayManager, dhcpRelayHandler, dataBroker);
-        VppRendererPolicyManager vppRendererPolicyManager = new VppRendererPolicyManager(fwManager, aclManager, dataBroker);
+        VppRendererPolicyManager vppRendererPolicyManager =
+            new VppRendererPolicyManager(fwManager, aclManager, dataBroker);
         dtoEventBus.register(vppRendererPolicyManager);
 
         vppNodeListener = new VppNodeListener(dataBroker, vppNodeManager, dtoEventBus);

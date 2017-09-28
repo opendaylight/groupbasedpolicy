@@ -84,23 +84,14 @@ public class NeutronFloatingIpAware implements NeutronAware<Floatingip> {
         if (oldEpIp != null && oldFloatingIp.getRouterId() != null) {
             L3ContextId routerL3ContextId = new L3ContextId(oldFloatingIp.getRouterId().getValue());
             DataStoreHelper.removeIfExists(LogicalDatastoreType.OPERATIONAL,
-                IidFactory.l3EndpointIid(routerL3ContextId, oldEpIp).augmentation(NatAddress.class), rwTx);
+                    IidFactory.l3EndpointIid(routerL3ContextId, oldEpIp).augmentation(NatAddress.class), rwTx);
         }
         if (epNatIp != null && newEpIp != null && newFloatingIp.getRouterId() != null) {
             L3ContextId routerL3ContextId = new L3ContextId(newFloatingIp.getRouterId().getValue());
             NatAddress nat = new NatAddressBuilder().setNatAddress(epNatIp).build();
-            AddressEndpointKey aek =
-                new AddressEndpointKey(newEpIp.getIpv4Address().getValue() + "/32", IpPrefixType.class,
-                    routerL3ContextId, L3Context.class);
-            LOG.info("Adding NAT augmentation {} for base-endpoint {}", epNatIp, aek);
-            rwTx.put(LogicalDatastoreType.OPERATIONAL, IidFactory.addressEndpointIid(aek)
-                    .augmentation(
-                        org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.NatAddress.class),
-                new org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.NatAddressBuilder()
-                    .setNatAddress(epNatIp)
-                    .build(), true);
-            rwTx.put(LogicalDatastoreType.OPERATIONAL, IidFactory.l3EndpointIid(routerL3ContextId, newEpIp)
-                .augmentation(NatAddress.class), nat, true);
+            LOG.info("Adding NAT augmentation {} for endpoint (deperecated model) {}", epNatIp, newEpIp.getValue());
+            rwTx.put(LogicalDatastoreType.OPERATIONAL,
+                    IidFactory.l3EndpointIid(routerL3ContextId, newEpIp).augmentation(NatAddress.class), nat, true);
         }
     }
 

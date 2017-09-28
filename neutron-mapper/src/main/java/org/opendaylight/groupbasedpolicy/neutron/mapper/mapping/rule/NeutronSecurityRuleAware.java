@@ -125,7 +125,13 @@ public class NeutronSecurityRuleAware implements NeutronAware<SecurityRule> {
             return;
         }
         ReadWriteTransaction rwTx = dataProvider.newReadWriteTransaction();
-        boolean isNeutronSecurityRuleAdded = addNeutronSecurityRule(secRule, neutron, rwTx);
+        boolean isNeutronSecurityRuleAdded = true;
+        try {
+            isNeutronSecurityRuleAdded = addNeutronSecurityRule(secRule, neutron, rwTx);
+        } catch (NullPointerException e) {
+            LOG.error("Failed to process rule {}", secRule.getUuid());
+            isNeutronSecurityRuleAdded = false;
+        }
         if (isNeutronSecurityRuleAdded) {
             DataStoreHelper.submitToDs(rwTx);
         } else {

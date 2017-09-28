@@ -11,7 +11,6 @@ import static com.google.common.base.Preconditions.checkArgument;
 
 import java.net.Inet4Address;
 import java.net.InetAddress;
-import java.util.concurrent.ExecutionException;
 
 import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
@@ -27,8 +26,10 @@ import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.NatAddress;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.NatAddressBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.endpoints.address.endpoints.AddressEndpointKey;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.L3ContextId;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ContextId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.UniqueId;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev170511.IpPrefixType;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev170511.L3Context;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.neutron.gbp.mapper.rev150513.mappings.gbp.by.neutron.mappings.base.endpoints.by.ports.BaseEndpointByPort;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.l3.rev150712.floatingips.attributes.floatingips.Floatingip;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
@@ -39,6 +40,8 @@ import com.google.common.base.Strings;
 import com.google.common.net.InetAddresses;
 
 public class Utils {
+
+    private static final String MASK_32 = "/32";
 
     private Utils() {
         throw new UnsupportedOperationException("Cannot create an instance.");
@@ -107,18 +110,11 @@ public class Utils {
         IpAddress newEpIp = newFloatingIp.getFixedIpAddress();
         IpAddress epNatIp = newFloatingIp.getFloatingIpAddress();
         if (epNatIp != null && newEpIp != null) {
-            InstanceIdentifier<BaseEndpointByPort> baseEpByPortId =
-                    NeutronGbpIidFactory.baseEndpointByPortIid(new UniqueId(newFloatingIp.getPortId().getValue()));
-            Optional<BaseEndpointByPort> optional =
-                    DataStoreHelper.readFromDs(LogicalDatastoreType.OPERATIONAL, baseEpByPortId, rwTx);
-            if (!optional.isPresent()) {
-                return;
-            }
-            NatAddress nat = new NatAddressBuilder().setNatAddress(epNatIp).build();
-            AddressEndpointKey addrEpKey = new AddressEndpointKey(optional.get().getAddress(),
-                    optional.get().getAddressType(), optional.get().getContextId(), optional.get().getContextType());
+            NatAddress natAddr = new NatAddressBuilder().setNatAddress(epNatIp).build();
+            AddressEndpointKey addrEpKey = new AddressEndpointKey(newEpIp.getIpv4Address().getValue() + MASK_32,
+                    IpPrefixType.class, new ContextId(newFloatingIp.getRouterId().getValue()), L3Context.class);
             rwTx.put(LogicalDatastoreType.OPERATIONAL,
-                    IidFactory.addressEndpointIid(addrEpKey).augmentation(NatAddress.class), nat, true);
+                    IidFactory.addressEndpointIid(addrEpKey).augmentation(NatAddress.class), natAddr, true);
         }
         if (oldEpIp != null) {
             InstanceIdentifier<BaseEndpointByPort> baseEpByPortId =
@@ -140,15 +136,9 @@ public class Utils {
             // NAT augmentation should have been already removed
             return;
         }
-        InstanceIdentifier<BaseEndpointByPort> baseEpByPortId =
-                NeutronGbpIidFactory.baseEndpointByPortIid(new UniqueId(removedFloatingIp.getPortId().getValue()));
-        Optional<BaseEndpointByPort> optional =
-                DataStoreHelper.readFromDs(LogicalDatastoreType.OPERATIONAL, baseEpByPortId, rwTx);
-        if (!optional.isPresent()) {
-            return;
-        }
-        AddressEndpointKey addrEpKey = new AddressEndpointKey(optional.get().getAddress(),
-                optional.get().getAddressType(), optional.get().getContextId(), optional.get().getContextType());
+        AddressEndpointKey addrEpKey =
+                new AddressEndpointKey(removedFloatingIp.getFixedIpAddress().getIpv4Address().getValue() + MASK_32,
+                        IpPrefixType.class, new ContextId(removedFloatingIp.getRouterId().getValue()), L3Context.class);
         rwTx.delete(LogicalDatastoreType.OPERATIONAL,
                 IidFactory.addressEndpointIid(addrEpKey).augmentation(NatAddress.class));
     }

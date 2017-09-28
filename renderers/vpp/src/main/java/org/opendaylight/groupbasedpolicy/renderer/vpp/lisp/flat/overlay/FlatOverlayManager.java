@@ -347,7 +347,9 @@ public class FlatOverlayManager {
         }
     }
 
-    private long getVni(String tenantUuid) {
-        return neutronTenantToVniMapper.getVni(tenantUuid);
+    public long getVni(String tenantUuid) {
+        long vni = neutronTenantToVniMapper.getVni(tenantUuid);
+        LOG.debug("Debugging: getVni {} = {}", tenantUuid, vni);
+        return vni;
     }
 }

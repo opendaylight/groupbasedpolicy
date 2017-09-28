@@ -10,6 +10,7 @@ package org.opendaylight.groupbasedpolicy.renderer.vpp.commands;
 
 import java.util.Collections;
 
+import org.opendaylight.groupbasedpolicy.renderer.vpp.config.ConfigUtil;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.General.Operations;
 import org.opendaylight.groupbasedpolicy.util.NetUtils;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.IpAddress;
@@ -87,8 +88,11 @@ public class LoopbackCommand extends AbstractInterfaceCommand {
                 .setDescription(description)
                 .setType(Loopback.class)
                 .setName(name)
-                .setLinkUpDownTrapEnable(Interface.LinkUpDownTrapEnable.Enabled)
-                .addAugmentation(NatInterfaceAugmentation.class, buildInboundNatAugmentation());
+                .setLinkUpDownTrapEnable(Interface.LinkUpDownTrapEnable.Enabled);
+
+        if (!ConfigUtil.getInstance().isL3FlatEnabled()) {
+            interfaceBuilder.addAugmentation(NatInterfaceAugmentation.class, buildInboundNatAugmentation());
+        }
 
         // Create the Loopback augmentation
         VppInterfaceAugmentationBuilder

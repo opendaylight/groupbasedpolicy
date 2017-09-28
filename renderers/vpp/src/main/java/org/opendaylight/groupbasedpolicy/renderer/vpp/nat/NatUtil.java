@@ -8,11 +8,16 @@
 
 package org.opendaylight.groupbasedpolicy.renderer.vpp.nat;
 
+import java.net.Inet4Address;
+import java.net.Inet6Address;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.stream.Collectors;
 
 import javax.annotation.Nonnull;
@@ -22,27 +27,28 @@ import org.apache.commons.net.util.SubnetUtils;
 import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
 import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.config.ConfigUtil;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.policy.PolicyContext;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.GbpNetconfTransaction;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.VppIidFactory;
 import org.opendaylight.groupbasedpolicy.util.DataStoreHelper;
 import org.opendaylight.groupbasedpolicy.util.NetUtils;
 import org.opendaylight.vbd.impl.transaction.VbdNetconfTransaction;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.IpAddress;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.IpPrefix;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.Ipv4Address;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.Ipv4Prefix;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.Ipv6Address;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.interfaces.rev140508.Interfaces;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.interfaces.rev140508.interfaces.Interface;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.interfaces.rev140508.interfaces.InterfaceKey;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.nat.rev150908.nat.config.nat.instances.nat.instance.mapping.table.MappingEntryBuilder;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.nat.rev150908.nat.parameters.ExternalIpAddressPool;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.nat.rev150908.nat.parameters.ExternalIpAddressPoolBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev170511.SubnetAugmentRenderer;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev170511.has.subnet.Subnet;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev170511.has.subnet.subnet.AllocationPool;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.RendererNodes;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.nodes.RendererNode;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.renderer.forwarding.RendererForwardingByTenant;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.renderer.forwarding.renderer.forwarding.by.tenant.RendererNetworkDomain;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.VppInterfaceAugmentation;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.renderers.renderer.renderer.nodes.renderer.node.PhysicalInterface;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.renderers.renderer.renderer.nodes.renderer.node.PhysicalInterfaceKey;
@@ -57,16 +63,37 @@ import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Function;
 import com.google.common.base.Optional;
+import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
 
 public class NatUtil {
     private static final Logger LOG = LoggerFactory.getLogger(NatUtil.class);
 
+    @SuppressWarnings("unchecked")
+    static Function<InstanceIdentifier<PhysicalInterface>, NodeId> resolveNodeId = (intf) -> {
+        return Preconditions
+            .checkNotNull(checkIid(intf).firstKeyOf(RendererNode.class).getNodePath().firstKeyOf(Node.class))
+            .getNodeId();
+    };
+
+    @SuppressWarnings("unchecked")
+    static Function<InstanceIdentifier<PhysicalInterface>, InstanceIdentifier<Interface>> resolveInterfaceIid = (intf) -> {
+        checkIid(intf);
+        return VppIidFactory
+            .getInterfaceIID(new InterfaceKey(checkIid(intf).firstKeyOf(PhysicalInterface.class).getInterfaceName()));
+    };
+
+    static private InstanceIdentifier<PhysicalInterface> checkIid(InstanceIdentifier<PhysicalInterface> iid) {
+        Preconditions.checkNotNull(iid.firstKeyOf(RendererNode.class).getNodePath().firstKeyOf(Node.class));
+        return iid;
+    }
+
     public void setInboundInterface(Interface iface, WriteTransaction wTx) {
         InstanceIdentifier<Nat> natIid = buildNatIid(VppIidFactory.getInterfaceIID(iface.getKey()));
         Nat nat =
-            new NatBuilder().setInbound(new InboundBuilder().setNat44Support(true).setPostRouting(false).build())
+            new NatBuilder().setInbound(new InboundBuilder().setNat44Support(true).setPostRouting(ConfigUtil.getInstance().isL3FlatEnabled()).build())
                 .build();
         wTx.put(LogicalDatastoreType.CONFIGURATION, natIid, nat);
     }
@@ -74,7 +101,7 @@ public class NatUtil {
     public static void setOutboundInterface(Interface iface, InstanceIdentifier<Node> vppIid) {
         InstanceIdentifier<Nat> natIid = buildNatIid(VppIidFactory.getInterfaceIID(iface.getKey()));
         Nat nat =
-            new NatBuilder().setOutbound(new OutboundBuilder().setNat44Support(true).setPostRouting(false).build())
+            new NatBuilder().setOutbound(new OutboundBuilder().setNat44Support(true).setPostRouting(ConfigUtil.getInstance().isL3FlatEnabled()).build())
                 .build();
         GbpNetconfTransaction.netconfSyncedWrite(vppIid, natIid, nat, GbpNetconfTransaction.RETRY_COUNT);
 
@@ -89,13 +116,13 @@ public class NatUtil {
         return ifaceIid.builder().augmentation(NatInterfaceAugmentation.class).child(Nat.class).build();
     }
 
-    public static Optional<InstanceIdentifier<PhysicalInterface>> resolvePhysicalInterface(IpPrefix extSubnetPrefix,
+    public static @Nonnull List<InstanceIdentifier<PhysicalInterface>> resolvePhysicalInterface(IpPrefix extSubnetPrefix,
         ReadOnlyTransaction rTx) {
         Optional<RendererNodes> readFromDs =
             DataStoreHelper.readFromDs(LogicalDatastoreType.OPERATIONAL, VppIidFactory.getRendererNodesIid(), rTx);
         rTx.close();
         if (!readFromDs.isPresent() || readFromDs.get().getRendererNode() == null) {
-            return Optional.absent();
+            return Collections.emptyList();
         }
         RendererNodes rendererNodes = readFromDs.get();
         List<RendererNode>
@@ -105,6 +132,7 @@ public class NatUtil {
                 .filter(rn -> rn.getAugmentation(VppInterfaceAugmentation.class) != null)
                 .filter(rn -> rn.getAugmentation(VppInterfaceAugmentation.class).getPhysicalInterface() != null)
                 .collect(Collectors.toList());
+        List<InstanceIdentifier<PhysicalInterface>> iids = new ArrayList<>();
         for (RendererNode rn : vppNodes) {
             java.util.Optional<PhysicalInterface>
                 optResolvedIface =
@@ -117,52 +145,118 @@ public class NatUtil {
                         .anyMatch(ipAddr -> NetUtils.isInRange(extSubnetPrefix, String.valueOf(ipAddr.getValue()))))
                     .findFirst();
             if (optResolvedIface.isPresent()) {
-                return Optional.of(VppIidFactory.getRendererNodeIid(rn)
+                iids.add(VppIidFactory.getRendererNodeIid(rn)
                     .builder()
                     .augmentation(VppInterfaceAugmentation.class)
                     .child(PhysicalInterface.class, new PhysicalInterfaceKey(optResolvedIface.get().getKey()))
                     .build());
             }
         }
-        return Optional.absent();
+        return iids;
     }
 
-    static List<ExternalIpAddressPool> resolveDynamicNat(@Nonnull PolicyContext policyCtx,
-        @Nullable List<MappingEntryBuilder> sNatEntries) {
-        List<RendererForwardingByTenant> forwardingByTenantList =
-                policyCtx.getPolicy().getConfiguration().getRendererForwarding().getRendererForwardingByTenant();
-        Map<Long, Ipv4Prefix> extCache = new HashMap<>();
-        // loop through forwarding by tenant
-        for (RendererForwardingByTenant rft : forwardingByTenantList) {
-            // loop through renderer network domain
-            for (RendererNetworkDomain domain : rft.getRendererNetworkDomain()) {
-                final SubnetAugmentRenderer subnetAugmentation = domain.getAugmentation(SubnetAugmentRenderer.class);
-                final Subnet subnet = subnetAugmentation.getSubnet();
-                if (subnet != null && !subnet.isIsTenant() && subnet.getAllocationPool() != null) {
-                    // loop through allocation pool
-                    for (AllocationPool pool : subnet.getAllocationPool()) {
-                        final IpPrefix subnetIpPrefix = subnet.getIpPrefix();
-                        if (subnetIpPrefix.getIpv4Prefix() != null) {
-                            final String firstEntry = pool.getFirst();
-                            final String lastEntry = pool.getLast();
-                            extCache.putAll(resolveDynamicNatPrefix(subnetIpPrefix.getIpv4Prefix(), firstEntry, lastEntry,
-                                    sNatEntries));
-                        }
-                    }
+    public static @Nonnull List<InstanceIdentifier<PhysicalInterface>> resolvePhysicalInterface(ReadOnlyTransaction rTx) {
+            Optional<RendererNodes> readFromDs =
+                DataStoreHelper.readFromDs(LogicalDatastoreType.OPERATIONAL, VppIidFactory.getRendererNodesIid(), rTx);
+            rTx.close();
+            if (!readFromDs.isPresent() || readFromDs.get().getRendererNode() == null) {
+                return Collections.emptyList();
+            }
+            RendererNodes rendererNodes = readFromDs.get();
+            List<RendererNode>
+                vppNodes =
+                rendererNodes.getRendererNode()
+                    .stream()
+                    .filter(rn -> rn.getAugmentation(VppInterfaceAugmentation.class) != null)
+                    .filter(rn -> rn.getAugmentation(VppInterfaceAugmentation.class).getPhysicalInterface() != null)
+                    .collect(Collectors.toList());
+            List<InstanceIdentifier<PhysicalInterface>> iids = new ArrayList<>();
+            for (RendererNode rn : vppNodes) {
+                java.util.Optional<PhysicalInterface>
+                    optResolvedIface =
+                    rn.getAugmentation(VppInterfaceAugmentation.class)
+                        .getPhysicalInterface()
+                        .stream()
+                        .filter(phIface -> phIface.getAddress() != null)
+                        .filter(phIface -> phIface.isExternal())
+                        .findFirst();
+                if (optResolvedIface.isPresent()) {
+                    iids.add(VppIidFactory.getRendererNodeIid(rn)
+                        .builder()
+                        .augmentation(VppInterfaceAugmentation.class)
+                        .child(PhysicalInterface.class, new PhysicalInterfaceKey(optResolvedIface.get().getKey()))
+                        .build());
                 }
             }
+            return iids;
         }
-        final List<ExternalIpAddressPool> extIps = new ArrayList<>();
-        for (Entry<Long, Ipv4Prefix> entry : extCache.entrySet()) {
-            extIps.add(new ExternalIpAddressPoolBuilder().setPoolId(entry.getKey())
-                .setExternalIpPool(entry.getValue())
-                .build());
+
+    public static Optional<MappingEntryBuilder> createStaticEntry(String internal, Ipv4Address external) {
+        IpAddress internalIp = null;
+        try {
+            InetAddress inetAddr = InetAddress.getByName(internal);
+            if (inetAddr instanceof Inet4Address) {
+                internalIp = new IpAddress(new Ipv4Address(internal));
+            } else if (inetAddr instanceof Inet6Address) {
+                internalIp = new IpAddress(new Ipv6Address(internal));
+            }
+        } catch (UnknownHostException e) {
+            LOG.error("Cannot resolve host IP {}. {}", internal, e.getMessage());
+            return Optional.absent();
         }
-        return extIps;
+        SubnetUtils subnet = new SubnetUtils(internal + "/32");
+        Long index = Integer.toUnsignedLong(subnet.getInfo().asInteger(internal));
+        MappingEntryBuilder mappingEntryBuilder = new MappingEntryBuilder()
+            .setType(
+                    org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.nat.rev150908.MappingEntry.Type.Static)
+            .setIndex(index)
+            .setInternalSrcAddress(internalIp)
+            .setExternalSrcAddress(external);
+        return Optional.of(mappingEntryBuilder);
     }
 
-    @VisibleForTesting
-    private static Map<Long, Ipv4Prefix> resolveDynamicNatPrefix(@Nonnull final Ipv4Prefix prefix,
+    public static List<ExternalIpAddressPool> resolveDynamicNat(@Nonnull PolicyContext policyCtx,
+            @Nullable List<MappingEntryBuilder> sNatEntries) {
+        Optional<List<RendererForwardingByTenant>> forwardingByTenantLists = Optional.of(policyCtx)
+            .transform(x -> x.getPolicy())
+            .transform(x -> x.getConfiguration())
+            .transform(x -> x.getRendererForwarding())
+            .transform(x -> x.getRendererForwardingByTenant());
+        if (!forwardingByTenantLists.isPresent()) {
+            LOG.warn("No dynamic NAT resolved in cfg version {}.", policyCtx.getPolicy().getVersion());
+            return ImmutableList.of();
+        }
+        Map<Long, Ipv4Prefix> extCache = new HashMap<>();
+        forwardingByTenantLists.get()
+            .stream()
+            .map(rft -> rft.getRendererNetworkDomain())
+            .flatMap(Collection::stream)
+            .filter(domain -> domain.getAugmentation(SubnetAugmentRenderer.class) != null)
+            .map(domain -> domain.getAugmentation(SubnetAugmentRenderer.class).getSubnet())
+            .filter(subnet -> !subnet.isIsTenant() && subnet.getAllocationPool() != null)
+            .forEach(subnet -> {
+                final IpPrefix subnetIpPrefix = subnet.getIpPrefix();
+                subnet.getAllocationPool().forEach(pool -> {
+                    if (subnetIpPrefix.getIpv4Prefix() != null) {
+                        final String firstEntry = pool.getFirst();
+                        final String lastEntry = pool.getLast();
+                        extCache.putAll(resolveDynamicNatPrefix(subnetIpPrefix.getIpv4Prefix(), firstEntry, lastEntry,
+                                sNatEntries));
+                    }
+                });
+            });
+        List<ExternalIpAddressPool> extPools = extCache.entrySet()
+            .stream()
+            .map(entry -> new ExternalIpAddressPoolBuilder().setPoolId(entry.getKey())
+                .setExternalIpPool(entry.getValue())
+                .build())
+            .collect(Collectors.toList());
+        LOG.trace("Resolved dynamic NAT pools in cfg version {}: {}", policyCtx.getPolicy().getVersion(), extPools);
+        return extPools;
+    }
+
+
+    static Map<Long, Ipv4Prefix> resolveDynamicNatPrefix(@Nonnull final Ipv4Prefix prefix,
                                                                  @Nonnull final String first,
                                                                  @Nullable final String last,
                                                                  @Nullable final List<MappingEntryBuilder> natEntries) {

@@ -16,7 +16,6 @@ import org.opendaylight.groupbasedpolicy.renderer.vpp.util.General;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.VppIidFactory;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.interfaces.rev140508.interfaces.Interface;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.interfaces.rev140508.interfaces.InterfaceBuilder;
-import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.interfaces.rev140508.interfaces.InterfaceKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vpp.proxy.arp.rev170315.ProxyArpInterfaceAugmentation;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vpp.proxy.arp.rev170315.ProxyArpInterfaceAugmentationBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vpp.proxy.arp.rev170315.interfaces._interface.ProxyArpBuilder;
@@ -35,6 +34,8 @@ public abstract class AbstractInterfaceCommand implements ConfigCommand, Interfa
     protected Boolean enabled;
     protected Boolean enableProxyArp;
     protected Long vrfId;
+    protected Boolean snatEnabled;
+
 
     public General.Operations getOperation() {
         return operation;
@@ -59,6 +60,10 @@ public abstract class AbstractInterfaceCommand implements ConfigCommand, Interfa
 
     public String getBridgeDomain() {
         return bridgeDomain;
+    }
+
+    public boolean isSnatEnabled() {
+        return snatEnabled;
     }
 
     public void execute(ReadWriteTransaction rwTx) {
@@ -102,7 +107,7 @@ public abstract class AbstractInterfaceCommand implements ConfigCommand, Interfa
     }
 
     protected void addEnableProxyArpAugmentation(InterfaceBuilder interfaceBuilder) {
-        if (enableProxyArp != null) {
+        if (enableProxyArp != null && enableProxyArp) {
             ProxyArpInterfaceAugmentationBuilder augmentationBuilder = new ProxyArpInterfaceAugmentationBuilder();
             augmentationBuilder.setProxyArp((new ProxyArpBuilder()).build());
             interfaceBuilder.addAugmentation(ProxyArpInterfaceAugmentation.class, augmentationBuilder.build());

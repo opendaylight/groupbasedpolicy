@@ -37,6 +37,7 @@ import org.opendaylight.groupbasedpolicy.renderer.vpp.iface.VppEndpointLocationP
 import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.LispStateManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.flat.overlay.FlatOverlayManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.loopback.LoopbackManager;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.nat.CentralizedNatImpl;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.nat.NatManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.policy.acl.AclManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.routing.RoutingManager;
@@ -87,6 +88,8 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vbridge.topology.rev160129.TopologyVbridgeAugment;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vbridge.tunnel.vxlan.rev170327.TunnelTypeVxlan;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vbridge.tunnel.vxlan.rev170327.network.topology.topology.tunnel.parameters.VxlanTunnelParameters;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vpp.acl.rev170615.access.lists.acl.access.list.entries.ace.matches.ace.type.VppAce;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang._interface.nat.rev170816._interface.nat.attributes.Nat;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.topology.Node;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 
@@ -138,9 +141,10 @@ public class VppRendererPolicyManagerTest extends CustomDataBrokerTest {
     public Collection<Class<?>> getClassesFromModules() {
         return Arrays.asList(Node.class, VppEndpoint.class, Interfaces.class, BridgeDomains.class,
                 LocationProviders.class, L2FloodDomain.class, VxlanVni.class, TopologyVbridgeAugment.class,
-                TunnelTypeVxlan.class, PhysicalLocationRef.class, AccessLists.class,
-                VppInterfaceAugmentation.class, VppAclInterfaceAugmentation.class, VxlanTunnelParameters.class);
-    }
+                TunnelTypeVxlan.class, PhysicalLocationRef.class, AccessLists.class, VppAce.class,
+                VppInterfaceAugmentation.class, VppAclInterfaceAugmentation.class, VxlanTunnelParameters.class,
+                PhysicalLocationRef.class, Nat.class);
+        }
 
     @Before
     public void init() throws Exception {
@@ -155,7 +159,7 @@ public class VppRendererPolicyManagerTest extends CustomDataBrokerTest {
         flatOverlayManager = new FlatOverlayManager(dataBroker, mountedDataProviderMock);
         ifaceManager = new InterfaceManager(mountedDataProviderMock, dataBroker, flatOverlayManager);
         aclManager = new AclManager(mountedDataProviderMock, ifaceManager);
-        natManager = new NatManager(dataBroker, mountedDataProviderMock);
+        natManager = new CentralizedNatImpl(dataBroker);
         routingManager = new RoutingManager(dataBroker, mountedDataProviderMock);
         bdManager = new BridgeDomainManagerImpl(mountPointDataBroker);
         dhcpRelayHandler = new DhcpRelayHandler(dataBroker);
@@ -182,7 +186,8 @@ public class VppRendererPolicyManagerTest extends CustomDataBrokerTest {
         storeVppEndpoint(clientEp.getKey(), CLIENT_MAC, CLIENT_1_IFACE_NAME, createVppEndpointIid(clientEp.getKey()));
         storeVppEndpoint(webEp.getKey(), WEB_MAC, WEB_1_IFACE_NAME, createVppEndpointIid(webEp.getKey()));
 
-        Configuration configuration = DtoFactory.createConfiguration(Arrays.asList(clientEp), Arrays.asList(webEp));
+        Configuration configuration = DtoFactory.createConfiguration(Collections.singletonList(clientEp),
+            Collections.singletonList(webEp));
         RendererPolicy rendererPolicy =
                 new RendererPolicyBuilder().setVersion(1L).setConfiguration(configuration).build();
         RendererPolicyConfEvent event = new RendererPolicyConfEvent(RENDERER_POLICY_IID, null, rendererPolicy);
@@ -398,11 +403,9 @@ public class VppRendererPolicyManagerTest extends CustomDataBrokerTest {
             Assert.assertTrue(interconnection instanceof BridgeBased);
             Assert.assertEquals(expectedBridgeDomain, ((BridgeBased) interconnection).getBridgeDomain());
         } else {
-            if (vppIfaceAug != null) {
-                L2 l2 = vppIfaceAug.getL2();
-                if (l2 != null) {
-                    Assert.assertNull(l2.getInterconnection());
-                }
+            L2 l2 = vppIfaceAug.getL2();
+            if (l2 != null) {
+                Assert.assertNull(l2.getInterconnection());
             }
         }
     }

@@ -320,11 +320,10 @@ public class InterfaceManager implements AutoCloseable {
             builder.setSocket(socket);
             builder.setRole(VhostUserRole.Client);
         }
-
         if (ConfigUtil.getInstance().isL3FlatEnabled()) {
             builder.setEnableProxyArp(true);
+            builder.setSnatEnabled(true);
         }
-
         VhostUserCommand vhostUserCommand =
                 builder.setOperation(operations).setDescription(vppEp.getDescription()).build();
         return Optional.of(vhostUserCommand);

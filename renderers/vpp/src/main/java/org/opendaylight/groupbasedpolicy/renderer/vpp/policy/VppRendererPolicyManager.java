@@ -185,8 +185,7 @@ public class VppRendererPolicyManager {
             fwManager.syncDhcpRelay(createdDhcpRelays, deletedDhcpRelays);
         }
 
-        fwManager.syncNatEntries(policyCtxAfter);
-
+        fwManager.syncNatEntries(policyCtxBefore, policyCtxAfter);
         fwManager.deleteRouting(policyCtxBefore);
         fwManager.syncRouting(policyCtxAfter);
 
@@ -258,7 +257,7 @@ public class VppRendererPolicyManager {
         }
 
         rEpKeys.forEach(rEpKey -> fwManager.createForwardingForEndpoint(rEpKey, policyCtx));
-        fwManager.syncNatEntries(policyCtx);
+        fwManager.createNatEntries(policyCtx);
         fwManager.syncRouting(policyCtx);
     }
 
