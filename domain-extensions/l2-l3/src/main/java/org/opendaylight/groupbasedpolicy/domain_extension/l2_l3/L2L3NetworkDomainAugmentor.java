@@ -8,8 +8,12 @@
 
 package org.opendaylight.groupbasedpolicy.domain_extension.l2_l3;
 
+import com.google.common.base.Preconditions;
+
 import java.util.AbstractMap.SimpleImmutableEntry;
 import java.util.Map.Entry;
+
+import javax.annotation.Nonnull;
 
 import org.opendaylight.groupbasedpolicy.api.NetworkDomainAugmentor;
 import org.opendaylight.groupbasedpolicy.api.NetworkDomainAugmentorRegistry;
@@ -19,8 +23,6 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.rev160427.forwarding.forwarding.by.tenant.NetworkDomain;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.renderer.forwarding.renderer.forwarding.by.tenant.RendererNetworkDomain;
 import org.opendaylight.yangtools.yang.binding.Augmentation;
-
-import com.google.common.base.Preconditions;
 
 public class L2L3NetworkDomainAugmentor implements NetworkDomainAugmentor, AutoCloseable {
 
@@ -32,8 +34,8 @@ public class L2L3NetworkDomainAugmentor implements NetworkDomainAugmentor, AutoC
     }
 
     @Override
-    public Entry<Class<? extends Augmentation<RendererNetworkDomain>>, Augmentation<RendererNetworkDomain>> buildRendererNetworkDomainAugmentation(
-            NetworkDomain input) {
+    public Entry<Class<? extends Augmentation<RendererNetworkDomain>>, Augmentation<RendererNetworkDomain>>
+        buildRendererNetworkDomainAugmentation(@Nonnull NetworkDomain input) {
         SubnetAugmentForwarding subnetForwarding = input.getAugmentation(SubnetAugmentForwarding.class);
         if (subnetForwarding == null) {
             return null;

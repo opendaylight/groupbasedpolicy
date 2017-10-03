@@ -8,6 +8,8 @@
 
 package org.opendaylight.controller.config.yang.config.domain_extension.l2_l3.impl;
 
+import javax.annotation.Nonnull;
+
 import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -51,7 +53,8 @@ public class L2L3DomainExtensionInstance implements ClusterSingletonService, Aut
     @Override
     public void instantiateServiceInstance() {
         LOG.info("Instantiating {}", this.getClass().getSimpleName());
-        l2l3NetworkDomainAugmentor = new L2L3NetworkDomainAugmentor(domainSpecificRegistry.getNetworkDomainAugmentorRegistry());
+        l2l3NetworkDomainAugmentor =
+            new L2L3NetworkDomainAugmentor(domainSpecificRegistry.getNetworkDomainAugmentorRegistry());
     }
 
     @Override
@@ -75,6 +78,7 @@ public class L2L3DomainExtensionInstance implements ClusterSingletonService, Aut
     }
 
     @Override
+    @Nonnull
     public ServiceGroupIdentifier getIdentifier() {
         return IDENTIFIER;
     }

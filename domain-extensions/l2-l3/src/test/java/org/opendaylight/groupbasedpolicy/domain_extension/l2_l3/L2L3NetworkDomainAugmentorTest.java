@@ -7,7 +7,7 @@
  */
 package org.opendaylight.groupbasedpolicy.domain_extension.l2_l3;
 
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.Map.Entry;
 
 import org.junit.Assert;
@@ -80,21 +80,22 @@ public class L2L3NetworkDomainAugmentorTest {
     @Test
     public void testBuildRendererNetworkDomainAugmentation() {
         Gateways gateways = new GatewaysBuilder().setGateway(IP_ADDRESS)
-            .setPrefixes(Arrays.asList(new PrefixesBuilder().setPrefix(IP_PREFIX_2).build()))
+            .setPrefixes(Collections.singletonList(new PrefixesBuilder().setPrefix(IP_PREFIX_2).build()))
             .build();
         SubnetAugmentForwarding subnetAugmentForwarding =
                 new SubnetAugmentForwardingBuilder().setSubnet(new SubnetBuilder().setIpPrefix(IP_PREFIX)
-                    .setGateways(Arrays.asList(gateways))
+                    .setGateways(Collections.singletonList(gateways))
                     .setVirtualRouterIp(IP_ADDRESS_2)
                     .build()).build();
         NetworkDomain networkDomain = new NetworkDomainBuilder()
             .setNetworkDomainType(
-                    org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.rev160427.NetworkDomain.class)
+                org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.rev160427.NetworkDomain.class)
             .setNetworkDomainId(NET_DOMAIN)
             .addAugmentation(SubnetAugmentForwarding.class, subnetAugmentForwarding)
             .build();
 
-        Entry<Class<? extends Augmentation<RendererNetworkDomain>>, Augmentation<RendererNetworkDomain>> rendererNetworkDomainAugmentation =
+        Entry<Class<? extends Augmentation<RendererNetworkDomain>>, Augmentation<RendererNetworkDomain>>
+            rendererNetworkDomainAugmentation =
                 l2l3Augmentor.buildRendererNetworkDomainAugmentation(networkDomain);
 
         Assert.assertNotNull(rendererNetworkDomainAugmentation);
@@ -109,11 +110,12 @@ public class L2L3NetworkDomainAugmentorTest {
     public void testBuildRendererNetworkDomainAugmentation_nullAugmentation() {
         NetworkDomain networkDomain = new NetworkDomainBuilder()
             .setNetworkDomainType(
-                    org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.rev160427.NetworkDomain.class)
+                org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.rev160427.NetworkDomain.class)
             .setNetworkDomainId(NET_DOMAIN)
             .build();
 
-        Entry<Class<? extends Augmentation<RendererNetworkDomain>>, Augmentation<RendererNetworkDomain>> rendererNetworkDomainAugmentation =
+        Entry<Class<? extends Augmentation<RendererNetworkDomain>>, Augmentation<RendererNetworkDomain>>
+            rendererNetworkDomainAugmentation =
                 l2l3Augmentor.buildRendererNetworkDomainAugmentation(networkDomain);
 
         Assert.assertNull(rendererNetworkDomainAugmentation);
