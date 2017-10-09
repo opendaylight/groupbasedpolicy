@@ -8,12 +8,15 @@
 
 package org.opendaylight.groupbasedpolicy.renderer.vpp.lisp;
 
+import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 
+import java.util.List;
 import java.util.concurrent.ExecutionException;
 
 import javax.annotation.Nonnull;
 
+import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.commands.lisp.AbstractLispCommand;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.commands.lisp.LispCommandWrapper;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.config.ConfigUtil;
@@ -26,22 +29,33 @@ import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.info.container.states
 import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.mappers.NeutronTenantToVniMapper;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.util.ConfigManagerHelper;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.util.Constants;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.util.GbpNetconfTransaction;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.util.LispUtil;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.MountedDataBrokerProvider;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.util.VppIidFactory;
+import org.opendaylight.groupbasedpolicy.util.DataStoreHelper;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.IpAddress;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.endpoints.AddressEndpointWithLocation;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.gpe.rev170801.NativeForwardPathsTables;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.gpe.rev170801._native.forward.paths.tables._native.forward.paths.table.NativeForwardPath;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.gpe.rev170801.gpe.feature.data.grouping.GpeFeatureData;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev170911.EidTableGrouping;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev170911.Lisp;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev170911.dp.subtable.grouping.local.mappings.LocalMapping;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev170911.dp.subtable.grouping.local.mappings.local.mapping.Eid;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev170911.eid.table.grouping.EidTable;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev170911.eid.table.grouping.eid.table.VniTable;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev170911.itr.remote.locator.sets.grouping.ItrRemoteLocatorSet;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev170911.lisp.feature.data.grouping.LispFeatureData;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev170911.locator.sets.grouping.LocatorSets;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev170911.locator.sets.grouping.locator.sets.LocatorSet;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev170911.map.register.grouping.MapRegister;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev170911.map.resolvers.grouping.MapResolvers;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev170911.map.resolvers.grouping.map.resolvers.MapResolver;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev170911.map.servers.grouping.MapServers;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev170911.map.servers.grouping.map.servers.MapServer;
+import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.topology.Node;
+import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -357,14 +371,83 @@ public class LispStateManager {
 
 
     private void deleteLispStatesFromHost(EndpointHost endpointHost) throws LispConfigCommandFailedException {
-        AbstractLispCommand<LispFeatureData> deleteLispFeatureData = LispCommandWrapper.deleteLispFeatureData();
+        /*AbstractLispCommand<LispFeatureData> deleteLispFeatureData = LispCommandWrapper.deleteLispFeatureData();
 
         if (LispStateCommandExecutor.executeDeleteCommand(endpointHost.getHostName(), deleteLispFeatureData)) {
             hostRelatedInfoContainer.deleteLispStateOfHost(endpointHost.getHostName());
             LOG.debug("Deleted all lisp data for host {}", endpointHost.getHostName());
         } else {
             throw new LispConfigCommandFailedException("Lisp delete feature data command failed!");
+        }*/
+
+        //Todo workaround to delete only inside data not whole lisp-feature-data
+        // (causes VPP to crash https://jira.fd.io/browse/HC2VPP-242) remove when fixed
+        InstanceIdentifier<Node> nodeIid = LispUtil.HOSTNAME_TO_IID.apply(endpointHost.getHostName());
+        Optional<Lisp> lispOptional =
+            GbpNetconfTransaction.read(nodeIid, LogicalDatastoreType.CONFIGURATION,
+                InstanceIdentifier.create(Lisp.class), GbpNetconfTransaction.RETRY_COUNT);
+        if (lispOptional.isPresent()) {
+            LispFeatureData lispFeatureData = lispOptional.get().getLispFeatureData();
+
+            if (lispFeatureData == null || nodeIid == null) {
+                return;
+            }
+
+            if (lispFeatureData.getEidTable() != null) {
+                GbpNetconfTransaction.netconfSyncedDelete(nodeIid,
+                    InstanceIdentifier.builder(Lisp.class).child(LispFeatureData.class).child(EidTable.class).build(),
+                    GbpNetconfTransaction.RETRY_COUNT);
+            }
+
+            if (lispFeatureData.getMapServers() != null) {
+                GbpNetconfTransaction.netconfSyncedDelete(nodeIid,
+                    InstanceIdentifier.builder(Lisp.class).child(LispFeatureData.class).child(MapServers.class).build(),
+                    GbpNetconfTransaction.RETRY_COUNT);
+            }
+
+            if (lispFeatureData.getMapRegister() != null) {
+                GbpNetconfTransaction.netconfSyncedDelete(nodeIid, InstanceIdentifier.builder(Lisp.class)
+                    .child(LispFeatureData.class)
+                    .child(MapRegister.class)
+                    .build(), GbpNetconfTransaction.RETRY_COUNT);
+            }
+
+            if (lispFeatureData.getMapResolvers() != null) {
+                GbpNetconfTransaction.netconfSyncedDelete(nodeIid, InstanceIdentifier.builder(Lisp.class)
+                    .child(LispFeatureData.class)
+                    .child(MapResolvers.class)
+                    .build(), GbpNetconfTransaction.RETRY_COUNT);
+            }
+
+            String skipLocator = "";
+            if (lispFeatureData.getItrRemoteLocatorSet() != null) {
+                skipLocator = lispFeatureData.getItrRemoteLocatorSet().getRemoteLocatorSetName();
+                GbpNetconfTransaction.netconfSyncedDelete(nodeIid, InstanceIdentifier.builder(Lisp.class)
+                    .child(LispFeatureData.class)
+                    .child(ItrRemoteLocatorSet.class)
+                    .build(), GbpNetconfTransaction.RETRY_COUNT);
+            }
+
+            if (lispFeatureData.getLocatorSets() != null) {
+
+                List<LocatorSet> locatorSetList = lispFeatureData.getLocatorSets().getLocatorSet();
+                if (locatorSetList == null || locatorSetList.isEmpty()) {
+                    return;
+                }
+
+                for (LocatorSet locatorSet : locatorSetList) {
+                    if (!skipLocator.equalsIgnoreCase(locatorSet.getName())) {
+                        GbpNetconfTransaction.netconfSyncedDelete(nodeIid, InstanceIdentifier.builder(Lisp.class)
+                            .child(LispFeatureData.class)
+                            .child(LocatorSets.class)
+                            .child(LocatorSet.class, locatorSet.getKey())
+                            .build(), GbpNetconfTransaction.RETRY_COUNT);
+                    }
+                }
+
+            }
         }
+
     }
 
     private void deleteNativeForwardPathsTables(EndpointHost endpointHost)
