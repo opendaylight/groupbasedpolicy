@@ -6,13 +6,13 @@
     <parent>
         <groupId>org.opendaylight.odlparent</groupId>
         <artifactId>single-feature-parent</artifactId>
-        <version>1.8.2-SNAPSHOT</version>
+        <version>1.8.2-Carbon</version>
         <relativePath/>
     </parent>
 
     <groupId>org.opendaylight.groupbasedpolicy</groupId>
     <artifactId>odl-groupbasedpolicy-ovssfc</artifactId>
-    <version>0.5.2-SNAPSHOT</version>
+    <version>0.5.2-Carbon</version>
     <packaging>feature</packaging>
     <!--
         The OpenFlow Overlay renderer with SFC.
@@ -23,10 +23,10 @@
     <name>OpenDaylight :: groupbasedpolicy :: OpenFlow Overlay SFC Renderer</name>
 
     <properties>
-        <openflowplugin.version>0.4.2-SNAPSHOT</openflowplugin.version>
-        <ovsdb.southbound.version>1.4.2-SNAPSHOT</ovsdb.southbound.version>
+        <openflowplugin.version>0.4.2-Carbon</openflowplugin.version>
+        <ovsdb.southbound.version>1.4.2-Carbon</ovsdb.southbound.version>
         <config.configfile.directory>etc/opendaylight/karaf</config.configfile.directory>
-        <sfc.version>0.5.2-SNAPSHOT</sfc.version>
+        <sfc.version>0.5.2-Carbon</sfc.version>
     </properties>
 
     <dependencyManagement>
