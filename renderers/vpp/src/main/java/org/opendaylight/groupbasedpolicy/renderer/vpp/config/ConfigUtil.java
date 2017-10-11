@@ -9,13 +9,11 @@
 package org.opendaylight.groupbasedpolicy.renderer.vpp.config;
 
 import com.google.common.base.Preconditions;
+
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.IpAddress;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/**
- * Created by Shakib Ahmed on 4/13/17.
- */
 public class ConfigUtil {
 
     private static final Logger LOG = LoggerFactory.getLogger(ConfigUtil.class);
@@ -66,8 +64,7 @@ public class ConfigUtil {
     void configureOdlIp(String configStr) {
         if (configStr == null) {
             odlTenantIp = null;
-            LOG.debug("Configuration variable {} is being unset. Setting the variable to null",
-                    ODL_IP);
+            LOG.debug("Configuration variable {} is being unset. Setting the variable to null", ODL_IP);
             return;
         }
         odlTenantIp = new IpAddress(configStr.trim().toCharArray());

@@ -8,6 +8,10 @@
 
 package org.opendaylight.groupbasedpolicy.renderer.vpp.routing;
 
+import com.google.common.base.Optional;
+import com.google.common.base.Preconditions;
+import com.google.common.base.Strings;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -42,13 +46,10 @@ import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.base.Optional;
-import com.google.common.base.Strings;
-
 public class RoutingManager {
     private static final Logger LOG = LoggerFactory.getLogger(RoutingManager.class);
 
-    private static final long DEFAULT_TABLE = 0L;
+    public static final long DEFAULT_TABLE = 0L;
 
     private final DataBroker dataBroker;
     private final MountedDataBrokerProvider mountDataProvider;
@@ -90,6 +91,7 @@ public class RoutingManager {
                 }
             }
 
+            Preconditions.checkNotNull(nodes);
             if (!ipv4Routes.isEmpty()) {
                 for (InstanceIdentifier<Node> node : nodes) {
 
@@ -191,7 +193,7 @@ public class RoutingManager {
 
     public boolean submitRouting(@Nonnull RoutingCommand routing, InstanceIdentifier<Node> nodeIid) {
         if (nodeIid == null) {
-            LOG.info("NodeId is null Cannot create routing. RoutingCommand: {}", routing);
+            LOG.info("NodeId is null Cannot create routing command. RoutingCommand: {}", routing);
             return false;
         }
         LOG.trace("Submitting routing for routing command: {}, nodeId: {}", routing, nodeIid);
@@ -200,11 +202,13 @@ public class RoutingManager {
         if (!mountPointDataBroker.isPresent()) {
             throw new IllegalStateException("Cannot find data broker for mount point " + nodeIid);
         }
-        LOG.info("Routing was created for forwarding. Routing: {}, for node: {}", routing, nodeIid);
+
         if (routing.getOperation() == General.Operations.PUT){
+            LOG.info("Routing was created for forwarding. Routing: {}, for node: {}", routing, nodeIid);
             return GbpNetconfTransaction.netconfSyncedWrite(nodeIid, routing,
                 GbpNetconfTransaction.RETRY_COUNT);
         } else if (routing.getOperation() == General.Operations.DELETE){
+            LOG.info("Routing was deleted for forwarding. Routing: {}, for node: {}", routing, nodeIid);
             return GbpNetconfTransaction.netconfSyncedDelete(nodeIid, routing,
                 GbpNetconfTransaction.RETRY_COUNT);
         }

@@ -8,6 +8,8 @@
 
 package org.opendaylight.groupbasedpolicy.renderer.vpp.lisp;
 
+import com.google.common.base.Preconditions;
+
 import java.util.concurrent.ExecutionException;
 
 import javax.annotation.Nonnull;
@@ -43,11 +45,6 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.base.Preconditions;
-
-/**
- * Created by Shakib Ahmed on 3/29/17.
- */
 public class LispStateManager {
     private static final Logger LOG = LoggerFactory.getLogger(LispStateManager.class);
 
@@ -61,7 +58,7 @@ public class LispStateManager {
     private static final short DEFAULT_WEIGHT = 1;
     public static final String DEFAULT_XTR_KEY = "admin";
     public static final String DEFAULT_LOCATOR_SET_NAME_PREFIX = "LS";
-    public static final String DEFAULT_MAPPINGRECORD_NAME_PREFIX = "MR_";
+    public static final String DEFAULT_MAPPING_RECORD_NAME_PREFIX = "MR_";
 
     public LispStateManager(@Nonnull MountedDataBrokerProvider mountedDataBrokerProvider) {
         Preconditions.checkNotNull(mountedDataBrokerProvider,
@@ -234,8 +231,7 @@ public class LispStateManager {
             throws LispConfigCommandFailedException {
         AbstractLispCommand<MapRegister> enableMapRegisterCommand = LispCommandWrapper.enableMapRegister();
 
-        if (LispStateCommandExecutor.executePutCommand(endpointHost.getHostName(), enableMapRegisterCommand)) {
-        } else {
+        if (!LispStateCommandExecutor.executePutCommand(endpointHost.getHostName(), enableMapRegisterCommand)) {
             throw new LispConfigCommandFailedException("Lisp enable mapregistration for host "
                     + endpointHost.getHostName() + " failed!");
         }
@@ -334,7 +330,8 @@ public class LispStateManager {
         }
     }
 
-    private void deleteEidFromLocalEidTableOfHostIfNeeded(EndpointHost endpointHost, LispState lispState, Eid eid, String eidMappingName) throws LispConfigCommandFailedException {
+    private void deleteEidFromLocalEidTableOfHostIfNeeded(EndpointHost endpointHost, LispState lispState, Eid eid,
+        String eidMappingName) throws LispConfigCommandFailedException {
         if (lispState.eidSetContains(eid)) {
             deleteEidFromLocalEidTableOfHost(endpointHost, lispState, eid, eidMappingName);
         }

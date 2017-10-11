@@ -8,6 +8,12 @@
 
 package org.opendaylight.groupbasedpolicy.renderer.vpp.config;
 
+import java.util.Dictionary;
+import java.util.Enumeration;
+import java.util.HashMap;
+import java.util.Hashtable;
+import java.util.function.Consumer;
+
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.Constants;
@@ -17,15 +23,6 @@ import org.osgi.service.cm.ManagedService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Dictionary;
-import java.util.Enumeration;
-import java.util.HashMap;
-import java.util.Hashtable;
-import java.util.function.Consumer;
-
-/**
- * Created by Shakib Ahmed on 4/17/17.
- */
 public class ConfigurationService implements ManagedService{
     private static final Logger LOG = LoggerFactory.getLogger(ConfigurationService.class);
 
@@ -63,7 +60,7 @@ public class ConfigurationService implements ManagedService{
                 LOG.info("Property {} being updated", key);
             } else {
                 LOG.debug("Configuration {} = {} being ignored because no consumer for this " +
-                        "configuration key has been mapped", keys, dictionary.get(key));
+                        "configuration key has been mapped", key, dictionary.get(key));
             }
         }
     }

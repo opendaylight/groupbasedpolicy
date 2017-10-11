@@ -8,6 +8,16 @@
 
 package org.opendaylight.groupbasedpolicy.renderer.vpp.iface;
 
+import com.google.common.base.Optional;
+import com.google.common.base.Preconditions;
+import com.google.common.base.Strings;
+import com.google.common.collect.HashMultimap;
+import com.google.common.collect.SetMultimap;
+import com.google.common.eventbus.Subscribe;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.MoreExecutors;
+
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
@@ -60,16 +70,6 @@ import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.google.common.base.Optional;
-import com.google.common.base.Preconditions;
-import com.google.common.base.Strings;
-import com.google.common.collect.HashMultimap;
-import com.google.common.collect.SetMultimap;
-import com.google.common.eventbus.Subscribe;
-import com.google.common.util.concurrent.Futures;
-import com.google.common.util.concurrent.ListenableFuture;
-import com.google.common.util.concurrent.MoreExecutors;
 
 public class InterfaceManager implements AutoCloseable {
 
@@ -163,7 +163,7 @@ public class InterfaceManager implements AutoCloseable {
                 potentialIfaceCommand = createLoopbackWithoutBdCommand(vppEndpoint, Operations.PUT);
             }
             else {
-                LOG.trace("L3 flat enabled: Creating of Loopback BVI disabled in InterfaceManager. LISP in VPP renderer will take care of this.");
+                LOG.trace("L3 flat enabled: LISP in VPP renderer will take care of creating loopback.");
             }
         }
         if (!potentialIfaceCommand.isPresent()) {
@@ -236,7 +236,7 @@ public class InterfaceManager implements AutoCloseable {
                 potentialIfaceCommand = createLoopbackWithoutBdCommand(vppEndpoint, Operations.DELETE);
             }
             else {
-                LOG.trace("L3 flat enabled: Deleting of Loopback BVI disabled in InterfaceManager. LISP in VPP renderer will take care of this.");
+                LOG.trace("L3 flat enabled: LISP in VPP renderer will take care of delete for loopback.");
             }
         }
 
@@ -253,10 +253,9 @@ public class InterfaceManager implements AutoCloseable {
             LOG.warn(message);
             return Futures.immediateFailedFuture(new VppRendererProcessingException(message));
         }
-        DataBroker vppDataBroker = potentialVppDataProvider.get();
 
         if (ConfigUtil.getInstance().isL3FlatEnabled()) {
-            flatOverlayManager.handleInterfaceDeleteForFlatOverlay(vppDataBroker, vppEndpoint);
+            flatOverlayManager.handleInterfaceDeleteForFlatOverlay(vppEndpoint);
         }
         return deleteIfaceOnVpp(ifaceWithoutBdCommand, vppNodeIid, vppEndpoint);
     }
@@ -399,9 +398,8 @@ public class InterfaceManager implements AutoCloseable {
      * @return {@link ListenableFuture}
      */
     public synchronized ListenableFuture<Void> addBridgeDomainToInterface(@Nonnull String bridgeDomainName,
-                                                                          @Nonnull AddressEndpointWithLocation addrEpWithLoc,
-                                                                          @Nonnull List<AccessListWrapper> aclWrappers,
-                                                                          boolean enableBvi) {
+        @Nonnull AddressEndpointWithLocation addrEpWithLoc, @Nonnull List<AccessListWrapper> aclWrappers,
+        boolean enableBvi) {
         ExternalLocationCase epLoc = resolveAndValidateLocation(addrEpWithLoc);
         InstanceIdentifier<Node> vppNodeIid = (InstanceIdentifier<Node>) epLoc.getExternalNodeMountPoint();
         String interfacePath = epLoc.getExternalNodeConnector();
@@ -469,7 +467,8 @@ public class InterfaceManager implements AutoCloseable {
                     .setExternalNodeConnector(interfacePath)
                     .build(), addrEpWithLoc.getKey());
         } else {
-            final String message = "Adding bridge domain " + bridgeDomainName + " to interface " + interfacePath + " failed";
+            final String message =
+                "Adding bridge domain " + bridgeDomainName + " to interface " + interfacePath + " failed";
             LOG.warn(message);
             return Futures.immediateFailedFuture(new VppRendererProcessingException(message));
         }
@@ -483,8 +482,8 @@ public class InterfaceManager implements AutoCloseable {
         return false;
     }
 
-    public ListenableFuture<Void> configureInterface(InstanceIdentifier<Node> vppIid, InterfaceKey ifaceKey, @Nullable String bridgeDomainName,
-                                                     @Nullable Boolean enableBvi) {
+    public ListenableFuture<Void> configureInterface(InstanceIdentifier<Node> vppIid, InterfaceKey ifaceKey,
+        @Nullable String bridgeDomainName, @Nullable Boolean enableBvi) {
         L2Builder l2Builder = readL2ForInterface(vppIid, ifaceKey);
         L2 l2 = l2Builder.setInterconnection(new BridgeBasedBuilder()
             .setBridgeDomain(bridgeDomainName)
@@ -493,7 +492,8 @@ public class InterfaceManager implements AutoCloseable {
         final boolean transactionState = GbpNetconfTransaction.netconfSyncedWrite(vppIid,
             VppIidFactory.getL2ForInterfaceIid(ifaceKey), l2, GbpNetconfTransaction.RETRY_COUNT);
         if (transactionState) {
-            LOG.debug("Adding bridge domain {} to interface {}", bridgeDomainName, VppIidFactory.getInterfaceIID(ifaceKey));
+            LOG.debug("Adding bridge domain {} to interface {}", bridgeDomainName,
+                VppIidFactory.getInterfaceIID(ifaceKey));
             return Futures.immediateFuture(null);
         } else {
             final String message = "Failed to add bridge domain " + bridgeDomainName + " to interface "
@@ -503,7 +503,8 @@ public class InterfaceManager implements AutoCloseable {
         }
     }
 
-    public ListenableFuture<Void> removeInterfaceFromBridgeDomain(InstanceIdentifier<Node> vppIid, InterfaceKey ifaceKey) {
+    public ListenableFuture<Void> removeInterfaceFromBridgeDomain(InstanceIdentifier<Node> vppIid,
+        InterfaceKey ifaceKey) {
         L2Builder l2Builder = readL2ForInterface(vppIid, ifaceKey);
         if (l2Builder.getInterconnection() == null || !(l2Builder.getInterconnection() instanceof BridgeBased)) {
             LOG.warn("Interface already not in bridge domain {} ", ifaceKey);
@@ -524,7 +525,8 @@ public class InterfaceManager implements AutoCloseable {
 
     private L2Builder readL2ForInterface(InstanceIdentifier<Node> vppIid, InterfaceKey ifaceKey) {
         InstanceIdentifier<L2> l2Iid = VppIidFactory.getL2ForInterfaceIid(ifaceKey);
-        final ReadOnlyTransaction rwTxRead = VbdNetconfTransaction.NODE_DATA_BROKER_MAP.get(vppIid).getKey().newReadOnlyTransaction();
+        final ReadOnlyTransaction rwTxRead = VbdNetconfTransaction.NODE_DATA_BROKER_MAP.get(vppIid).getKey()
+            .newReadOnlyTransaction();
         Optional<L2> optL2 = DataStoreHelper.readFromDs(LogicalDatastoreType.CONFIGURATION, l2Iid, rwTxRead);
         rwTxRead.close();
         return  (optL2.isPresent()) ? new L2Builder(optL2.get()) : new L2Builder();

@@ -7,20 +7,19 @@
  */
 package org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.info.container.states;
 
-import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.Ipv4Address;
-
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 
-/**
- * Created by Shakib Ahmed on 7/14/17.
- */
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.Ipv4Address;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 public class PortInterfaces {
     private HashMap<String, PortRouteState> interfaceNameToPortRouteStateMapper;
     private Set<String> metadataInterfaceSet;
+    private static final Logger LOG = LoggerFactory.getLogger(PortInterfaces.class);
+
 
     public PortInterfaces() {
         interfaceNameToPortRouteStateMapper = new HashMap<>();
@@ -52,11 +51,22 @@ public class PortInterfaces {
     }
 
     public long getInterfaceVrfId(String interfaceName) {
-        return interfaceNameToPortRouteStateMapper.get(interfaceName).getVrfId();
+        PortRouteState portRouteState = interfaceNameToPortRouteStateMapper.get(interfaceName);
+        if (portRouteState != null) {
+            return portRouteState.getVrfId();
+        } else {
+            LOG.warn("cannot get VrfId for interface name. interfaceName: {}, interfaceNameToPortRouteStateMapper: {}",
+                interfaceName, interfaceNameToPortRouteStateMapper.values());
+        }
+        return -1L;
     }
 
     public void removePortInterface(String interfaceName) {
         metadataInterfaceSet.remove(interfaceName);
         interfaceNameToPortRouteStateMapper.remove(interfaceName);
+    }
+
+    public boolean isRoutingContextForInterfaceInitialized(String interfaceName) {
+        return interfaceNameToPortRouteStateMapper.get(interfaceName) != null;
     }
 }

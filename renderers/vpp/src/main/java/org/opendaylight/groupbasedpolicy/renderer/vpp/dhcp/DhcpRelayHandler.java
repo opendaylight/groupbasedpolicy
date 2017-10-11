@@ -10,6 +10,9 @@ package org.opendaylight.groupbasedpolicy.renderer.vpp.dhcp;
 
 import static org.opendaylight.groupbasedpolicy.renderer.vpp.util.VppIidFactory.getVppRendererConfig;
 
+import com.google.common.base.Optional;
+import com.google.common.collect.SetMultimap;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -35,9 +38,6 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vpp.dhcp
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.NodeId;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.google.common.base.Optional;
-import com.google.common.collect.SetMultimap;
 
 public class DhcpRelayHandler {
 
@@ -135,6 +135,12 @@ public class DhcpRelayHandler {
 
     public boolean submitDhcpRelay(DhcpRelayCommand dhcpRelayCommand) {
         LOG.trace("Submitting DhcpRelay command: {}, nodeId: {}", dhcpRelayCommand, dhcpRelayCommand.getVppNodeId());
+        if (dhcpRelayCommand.getServerIpAddresses().isEmpty() || dhcpRelayCommand.getGatewayIpAddress() == null
+            || dhcpRelayCommand.getVppNodeId() == null) {
+            LOG.warn("Cannot submit DHCP Relay. dhcpRelayCommand: {}, nodeId: {}.", dhcpRelayCommand,
+                dhcpRelayCommand.getVppNodeId());
+            return false;
+        }
         switch (dhcpRelayCommand.getOperation()){
             case PUT:
                 return GbpNetconfTransaction.netconfSyncedWrite(

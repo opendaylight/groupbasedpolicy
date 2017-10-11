@@ -8,6 +8,8 @@
 
 package org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.flat.overlay;
 
+import com.google.common.base.Optional;
+import com.google.common.base.Preconditions;
 
 import javax.annotation.Nonnull;
 
@@ -26,6 +28,7 @@ import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.mappers.NeutronTenant
 import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.util.ConfigManagerHelper;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.util.Constants;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.util.IpAddressUtil;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.routing.RoutingManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.GbpNetconfTransaction;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.General;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.LispUtil;
@@ -37,6 +40,7 @@ import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.Ipv4Prefix;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.interfaces.rev140508.interfaces.InterfaceKey;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.yang.types.rev130715.PhysAddress;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.vpp.routing.rev170917.VniReference;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.endpoints.AddressEndpointWithLocation;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.Config;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425._interface.attributes._interface.type.choice.TapCase;
@@ -47,12 +51,6 @@ import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.base.Optional;
-import com.google.common.base.Preconditions;
-
-/**
- * Created by Shakib Ahmed on 5/2/17.
- */
 public class FlatOverlayManager {
     private static final Logger LOG = LoggerFactory.getLogger(FlatOverlayManager.class);
 
@@ -135,11 +133,15 @@ public class FlatOverlayManager {
         deleteStaticRoute(addressEp);
     }
 
-    public void handleInterfaceDeleteForFlatOverlay(DataBroker vppDataBroker, VppEndpoint vppEndpoint) {
+    public void handleInterfaceDeleteForFlatOverlay(VppEndpoint vppEndpoint) {
         String hostName = vppEndpoint.getVppNodeId().getValue();
         String interfaceName = vppEndpoint.getVppInterfaceName();
+        LOG.trace("handleInterfaceDeleteForFlatOverlay: hostname: {}, interfaceName: {}", hostName,interfaceName);
 
-        staticRoutingHelper.deleteAllRoutesThroughInterface(vppDataBroker, hostName, interfaceName);
+        Preconditions.checkNotNull(hostName, "Hostname cannot be null when deleting Interface");
+        Preconditions.checkNotNull(interfaceName, "InterfaceName cannot be null when deleting Interface");
+
+        staticRoutingHelper.deleteAllRoutesThroughInterface(hostName, interfaceName);
 
         PortInterfaces portInterfaces = hostRelatedInfoContainer.getPortInterfaceStateOfHost(hostName);
         portInterfaces.removePortInterface(interfaceName);
@@ -203,6 +205,11 @@ public class FlatOverlayManager {
                               String physicalAddress,
                               Ipv4Address ipv4Address) {
         Ipv4AddressNoZone ip = new Ipv4AddressNoZone(ipv4Address);
+        if (physicalAddress == null || physicalAddress.isEmpty()) {
+            LOG.warn("Cannot add static arp for interface {}, ip={}, because physical address is null or empty",
+                interfaceName, ip, physicalAddress);
+            return;
+        }
         InterfaceKey interfaceKey = new InterfaceKey(interfaceName);
         if (!putStaticArp(hostName,
                              interfaceKey,
@@ -220,7 +227,8 @@ public class FlatOverlayManager {
                                  InterfaceKey interfaceKey,
                                  PhysAddress physAddress,
                                  Ipv4AddressNoZone ip) {
-        StaticArpCommand.StaticArpCommandBuilder staticArpCommandBuilder = new StaticArpCommand.StaticArpCommandBuilder();
+        StaticArpCommand.StaticArpCommandBuilder staticArpCommandBuilder =
+            new StaticArpCommand.StaticArpCommandBuilder();
 
         staticArpCommandBuilder.setOperation(General.Operations.PUT);
         staticArpCommandBuilder.setInterfaceKey(interfaceKey);
@@ -259,8 +267,9 @@ public class FlatOverlayManager {
         if (!vrfHolderOfHost.hasVrf(vrfId)) {
             if (!staticRoutingHelper.addRoutingProtocolForVrf(LispUtil.HOSTNAME_TO_IID.apply(hostName), vrfId,
                     vrfHolderOfHost)) {
-                addStaticRouteToPublicInterface(hostName, vrfId);
                 LOG.warn("Failed to add Routing protocol for host {} and vrf {}!", hostName, vrfId);
+            } else {
+                addStaticRouteToPublicInterface(hostName, vrfId);
             }
         }
 
@@ -272,7 +281,7 @@ public class FlatOverlayManager {
         }
 
         if (!staticRoutingHelper.addSingleStaticRouteInRoutingProtocol(hostName, vrfId, hostIpSubnetUuid,
-                ipWithoutPrefix, ipv4Prefix, outgoingInterfaceName)) {
+                ipWithoutPrefix, ipv4Prefix, outgoingInterfaceName, null)) {
             LOG.warn("Failed to add routing ({} via {}) in vrf {} in compute host {}!",
                     ipv4Prefix, outgoingInterfaceName, vrfId, hostName);
         } else {
@@ -282,19 +291,23 @@ public class FlatOverlayManager {
     }
 
     private void addStaticRouteToPublicInterface(String hostName, long vrfId) {
+        LOG.trace("addStaticRouteToPublicInterface, hostname: {}, vrfId: {}", hostName, vrfId);
         Ipv4Address physicalInterfaceIp = hostRelatedInfoContainer
                 .getPhysicalInterfaceState(hostName)
                 .getIp(PhysicalInterfaces.PhysicalInterfaceType.PUBLIC).getIpv4Address();
-        String physicalInterfaceName = hostRelatedInfoContainer
+        String interfaceName = hostRelatedInfoContainer
                 .getPhysicalInterfaceState(hostName)
                 .getName(PhysicalInterfaces.PhysicalInterfaceType.PUBLIC);
-        if (physicalInterfaceName != null && !physicalInterfaceName.isEmpty()) {
+
+        if (interfaceName != null && !interfaceName.isEmpty()) {
+            LOG.trace("Adding Public interface route. hostname: {}, VrfId: {}, Ip: {}, Gw: {}, InterfaceName: {}.",
+                hostName, vrfId, physicalInterfaceIp, null, interfaceName);
             if (!staticRoutingHelper.addSingleStaticRouteInRoutingProtocol(hostName, vrfId,
-                    Constants.PUBLIC_SUBNET_UUID, physicalInterfaceIp,
-                    IpAddressUtil.toIpV4Prefix(physicalInterfaceIp), physicalInterfaceName)) {
+                Constants.PUBLIC_SUBNET_UUID, null, IpAddressUtil.toIpV4Prefix(physicalInterfaceIp),
+                interfaceName, new VniReference(RoutingManager.DEFAULT_TABLE))) {
                 LOG.warn("Failed to add route for physical interface in vrf {} compute host {}", vrfId, hostName);
             } else {
-                LOG.debug("Added route for physical interface {} in vrf {}", physicalInterfaceName, vrfId);
+                LOG.debug("Added route for physical interface {} in vrf {}", interfaceName, vrfId);
             }
         }
     }
@@ -318,6 +331,10 @@ public class FlatOverlayManager {
         PortRouteState portRouteState = hostRelatedInfoContainer
                                             .getPortInterfaceStateOfHost(hostName)
                                             .getPortRouteState(interfaceName);
+        if (portRouteState == null) {
+            LOG.warn("Port route state is null, it has been deleted already. Skip delete for addresEp: {}.", addressEp);
+            return;
+        }
 
         SubnetState subnetState = hostRelatedInfoContainer
                                     .getVrfStateOfHost(hostName)

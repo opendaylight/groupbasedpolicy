@@ -8,6 +8,11 @@
 
 package org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.util;
 
+import com.google.common.base.Optional;
+import com.google.common.base.Preconditions;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
+
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -68,15 +73,6 @@ import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.base.Optional;
-import com.google.common.base.Preconditions;
-import com.google.common.util.concurrent.Futures;
-import com.google.common.util.concurrent.ListenableFuture;
-
-
-/**
- * Created by Shakib Ahmed on 3/31/17.
- */
 public class ConfigManagerHelper {
     private static final Logger LOG = LoggerFactory.getLogger(ConfigManagerHelper.class);
 
@@ -353,7 +349,7 @@ public class ConfigManagerHelper {
     public String constructEidMappingName(AddressEndpointWithLocation addressEp) {
         String interfaceName = getInterfaceName(addressEp).get();
         String ipAddress = getInterfaceIp(addressEp).getValue();
-        return LispStateManager.DEFAULT_MAPPINGRECORD_NAME_PREFIX + interfaceName + "_" + ipAddress;
+        return LispStateManager.DEFAULT_MAPPING_RECORD_NAME_PREFIX + interfaceName + "_" + ipAddress;
     }
 
     public String getSubnet(AddressEndpointWithLocation addressEp) {
