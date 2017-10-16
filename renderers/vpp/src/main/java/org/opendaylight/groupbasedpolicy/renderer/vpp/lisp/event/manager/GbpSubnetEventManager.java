@@ -60,10 +60,12 @@ public class GbpSubnetEventManager {
     }
 
     private void processSubnetCreated(String subnetUuid, GbpSubnet subnetInfo) {
-        subnetUuidToGbpSubnetInfoMapper.addSubnetInfo(subnetUuid, subnetInfo);
+        //subnetUuidToGbpSubnetInfoMapper.addSubnetInfo(subnetUuid, subnetInfo);
+        loopbackManager.gbpSubnetCreated(subnetUuid, subnetInfo);
     }
 
     private void processSubnetDeleted(String subnetUuid) {
-        subnetUuidToGbpSubnetInfoMapper.removeSubnetInfo(subnetUuid);
+        //subnetUuidToGbpSubnetInfoMapper.removeSubnetInfo(subnetUuid);
+        loopbackManager.gbpSubnetdeleted(subnetUuid);
     }
 }

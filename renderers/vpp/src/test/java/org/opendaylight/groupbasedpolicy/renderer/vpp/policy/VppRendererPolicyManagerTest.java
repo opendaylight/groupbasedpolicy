@@ -37,6 +37,7 @@ import org.opendaylight.groupbasedpolicy.renderer.vpp.iface.VppEndpointLocationP
 import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.LispStateManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.flat.overlay.FlatOverlayManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.loopback.LoopbackManager;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.listener.VppEndpointListener;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.nat.CentralizedNatImpl;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.nat.NatManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.policy.acl.AclManager;
@@ -92,14 +93,18 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vpp.acl.
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang._interface.nat.rev170816._interface.nat.attributes.Nat;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.topology.Node;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Optional;
 import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
+import com.google.common.eventbus.EventBus;
 
 @RunWith(MockitoJUnitRunner.class)
 public class VppRendererPolicyManagerTest extends CustomDataBrokerTest {
 
+    private static final Logger LOG = LoggerFactory.getLogger(VppRendererPolicyManagerTest.class);
     private static final InstanceIdentifier<RendererPolicy> RENDERER_POLICY_IID =
             IidFactory.rendererIid(VppRenderer.NAME).child(RendererPolicy.class);
     private final static String SOCKET = "socket";
@@ -136,6 +141,7 @@ public class VppRendererPolicyManagerTest extends CustomDataBrokerTest {
     private FlatOverlayManager flatOverlayManager;
     private DhcpRelayHandler dhcpRelayHandler;
     private VppRendererPolicyManager vppRendererPolicyManager;
+    private VppEndpointListener vppEndpointListener;
 
     @Override
     public Collection<Class<?>> getClassesFromModules() {
@@ -150,13 +156,16 @@ public class VppRendererPolicyManagerTest extends CustomDataBrokerTest {
     public void init() throws Exception {
         mountedDataProviderMock = Mockito.mock(MountedDataBrokerProvider.class);
         mountPointDataBroker = getDataBroker();
+        EventBus dtoEventBus = new EventBus((exception, context) -> LOG.error("Could not dispatch event: {} to {}",
+            context.getSubscriber(), context.getSubscriberMethod(), exception));
         setup(); // initialize new data broker for ODL data store
         dataBroker = getDataBroker();
         Mockito.when(mountedDataProviderMock.resolveDataBrokerForMountPoint(Mockito.any(InstanceIdentifier.class)))
             .thenReturn(Optional.of(mountPointDataBroker));
+        vppEndpointListener = new VppEndpointListener(dataBroker, dtoEventBus);
         lispStateManager = new LispStateManager(mountedDataProviderMock);
         loopbackManager = new LoopbackManager(mountedDataProviderMock);
-        flatOverlayManager = new FlatOverlayManager(dataBroker, mountedDataProviderMock);
+        flatOverlayManager = new FlatOverlayManager(dataBroker, mountedDataProviderMock, vppEndpointListener);
         ifaceManager = new InterfaceManager(mountedDataProviderMock, dataBroker, flatOverlayManager);
         aclManager = new AclManager(mountedDataProviderMock, ifaceManager);
         natManager = new CentralizedNatImpl(dataBroker);

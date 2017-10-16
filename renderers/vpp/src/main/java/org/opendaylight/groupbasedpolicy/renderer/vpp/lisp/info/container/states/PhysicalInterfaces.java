@@ -43,4 +43,9 @@ public class PhysicalInterfaces {
     public String getName(PhysicalInterfaceType physicalInterfaceType) {
         return physicalInterfaceTypeToNameMapper.get(physicalInterfaceType);
     }
+
+    @Override public String toString() {
+        return "PhysicalInterfaces{" + "physicalInterfaceTypeToIpMapper=" + physicalInterfaceTypeToIpMapper
+            + ", physicalInterfaceTypeToNameMapper=" + physicalInterfaceTypeToNameMapper + '}';
+    }
 }

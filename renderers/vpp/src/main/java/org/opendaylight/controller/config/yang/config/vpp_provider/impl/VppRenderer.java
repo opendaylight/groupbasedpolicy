@@ -147,11 +147,11 @@ public class VppRenderer implements AutoCloseable, BindingAwareProvider {
                 Preconditions.checkNotNull(providerContext.getSALService(MountPointService.class));
         mountDataProvider = new MountedDataBrokerProvider(mountService, dataBroker);
         VppNodeManager vppNodeManager = new VppNodeManager(dataBroker, providerContext, publicInterfaces);
-
         EventBus dtoEventBus = new EventBus((exception, context) -> LOG.error("Could not dispatch event: {} to {}",
                 context.getSubscriber(), context.getSubscriberMethod(), exception));
+        vppEndpointListener = new VppEndpointListener(dataBroker, dtoEventBus);
         LispStateManager lispStateManager = new LispStateManager(mountDataProvider);
-        FlatOverlayManager flatOverlayManager = new FlatOverlayManager(dataBroker, mountDataProvider);
+        FlatOverlayManager flatOverlayManager = new FlatOverlayManager(dataBroker, mountDataProvider, vppEndpointListener);
         LoopbackManager loopbackManager = new LoopbackManager(mountDataProvider);
 
         interfaceManager = new InterfaceManager(mountDataProvider, dataBroker, flatOverlayManager);
@@ -174,7 +174,6 @@ public class VppRenderer implements AutoCloseable, BindingAwareProvider {
         dtoEventBus.register(vppRendererPolicyManager);
 
         vppNodeListener = new VppNodeListener(dataBroker, vppNodeManager, dtoEventBus);
-        vppEndpointListener = new VppEndpointListener(dataBroker, dtoEventBus);
         rendererPolicyListener = new RendererPolicyListener(dataBroker, dtoEventBus);
         vppGbpSubnetListener = new GbpSubnetListener(dataBroker, dtoEventBus);
         registerToRendererManager();

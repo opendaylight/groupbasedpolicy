@@ -7,7 +7,11 @@
  */
 package org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.info.container.states;
 
+import com.google.common.collect.Lists;
+
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.Ipv4Address;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -36,7 +40,7 @@ public class PortRouteState {
         ipToSubnetUuidMapper.put(ip, ipSubnetUuid);
     }
 
-    public long getRouteIdOfIp(Ipv4Address interfaceIp) {
+    public Long getRouteIdOfIp(Ipv4Address interfaceIp) {
         return ipToRouteIdMapper.get(interfaceIp);
     }
 
@@ -51,5 +55,13 @@ public class PortRouteState {
 
     public List<Ipv4Address> getAllIps() {
         return new ArrayList<>(ipToRouteIdMapper.keySet());
+    }
+
+    public boolean isPortRouteStateEmpty() {
+        return (ipToRouteIdMapper.size() == 0 && ipToSubnetUuidMapper.size() == 0);
+    }
+
+    @Override public String toString() {
+        return "PortRouteState= {vrfId= " + vrfId + ", ipToSubnetUuidMapper= " + ipToSubnetUuidMapper + ", ipToRouteIdMapper= " + ipToRouteIdMapper + "}";
     }
 }

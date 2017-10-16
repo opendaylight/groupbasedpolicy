@@ -50,15 +50,12 @@ public class PortInterfaces {
         metadataInterfaceSet.add(interfaceName);
     }
 
-    public long getInterfaceVrfId(String interfaceName) {
+    public Long getInterfaceVrfId(String interfaceName) {
         PortRouteState portRouteState = interfaceNameToPortRouteStateMapper.get(interfaceName);
         if (portRouteState != null) {
             return portRouteState.getVrfId();
-        } else {
-            LOG.warn("cannot get VrfId for interface name. interfaceName: {}, interfaceNameToPortRouteStateMapper: {}",
-                interfaceName, interfaceNameToPortRouteStateMapper.values());
         }
-        return -1L;
+        return null;
     }
 
     public void removePortInterface(String interfaceName) {
@@ -68,5 +65,10 @@ public class PortInterfaces {
 
     public boolean isRoutingContextForInterfaceInitialized(String interfaceName) {
         return interfaceNameToPortRouteStateMapper.get(interfaceName) != null;
+    }
+
+    @Override public String toString() {
+        return "PortInterfaces{" + "interfaceNameToPortRouteStateMapper=" + interfaceNameToPortRouteStateMapper
+            + ", metadataInterfaceSet=" + metadataInterfaceSet + '}';
     }
 }

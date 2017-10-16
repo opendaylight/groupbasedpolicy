@@ -13,7 +13,7 @@ package org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.util;
  */
 public class Constants {
     public static final String METADATA_IP = "169.254.169.254";
-    public static final String METADATA_SUBNET_UUID = "dummy-metadata-subet";
+    public static final String METADATA_SUBNET_UUID = "local-metadata-subnet";
     public static final String ROUTING_PROTOCOL_NAME_PREFIX = "static-routing-";
     public static final String DEFAULT_ROUTING_DESCRIPTION = "Static route added from GBP for flat L3 overlay";
     public static final String GW_NAME_PREFIX = "loop-";

@@ -88,6 +88,10 @@ public class LispState {
         return vniSet.contains(vni);
     }
 
+    public int vniSetCount() {
+        return vniSet == null ? 0 : vniSet.size();
+    }
+
     public void addInVniSet(long vni) {
         vniSet.add(vni);
     }
@@ -105,5 +109,24 @@ public class LispState {
     }
     public void deleteEid(Eid eid) {
         eidSet.remove(eid);
+    }
+
+    public void deleteEidSet() {
+        eidSet.clear();
+    }
+
+    public void deleteVniSet() {
+        vniSet.clear();
+    }
+
+    public void deleteLocators() {
+        interfaceNameToLocatorSetNameMapper.clear();
+    }
+
+    @Override public String toString() {
+        return "LispState{" + "lispEnabled=" + lispEnabled + ", gpeEnabled=" + gpeEnabled
+            + ", interfaceNameToLocatorSetNameMapper=" + interfaceNameToLocatorSetNameMapper
+            + ", mapServerIpAddressSet=" + mapServerIpAddressSet + ", mapResolverIpAddressSet="
+            + mapResolverIpAddressSet + ", vniSet=" + vniSet + ", eidSet=" + eidSet + '}';
     }
 }

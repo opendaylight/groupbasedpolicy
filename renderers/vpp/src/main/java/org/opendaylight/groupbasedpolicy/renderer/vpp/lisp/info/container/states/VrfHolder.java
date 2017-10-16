@@ -27,7 +27,19 @@ public class VrfHolder {
         vrfIdToVrfStateMapper.put(vrfId, new VrfState(routingProtocolName));
     }
 
+    public VrfState removeVrfState(Long vrfId) {
+        return vrfIdToVrfStateMapper.remove(vrfId);
+    }
+
     public boolean hasVrf(Long vrfId) {
         return vrfIdToVrfStateMapper.containsKey(vrfId);
+    }
+
+    public int vrfStateCount() {
+        return vrfIdToVrfStateMapper.size();
+    }
+
+    @Override public String toString() {
+        return "VrfHolder{" + "vrfIdToVrfStateMapper=" + vrfIdToVrfStateMapper + '}';
     }
 }

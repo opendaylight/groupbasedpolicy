@@ -9,9 +9,6 @@ package org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.info.container.state
 
 import java.util.HashMap;
 
-/**
- * Created by Shakib Ahmed on 7/17/17.
- */
 public class SubnetHolder {
     private HashMap<String, SubnetState> subnetUuidToSubnetStateMapper;
 
@@ -20,12 +17,27 @@ public class SubnetHolder {
     }
 
     public SubnetState getSubnetState(String subnetUuid) {
+        return  subnetUuidToSubnetStateMapper.get(subnetUuid);
+    }
+
+    public SubnetState initializeSubnetState (String subnetUuid) {
         return subnetUuidToSubnetStateMapper.computeIfAbsent(subnetUuid,
-                key -> new SubnetState());
+            key -> new SubnetState());
     }
 
     public void removeSubnetState(String subnetUuid) {
         subnetUuidToSubnetStateMapper.remove(subnetUuid);
     }
 
+    public int subnetHolderCount() {
+        return subnetUuidToSubnetStateMapper.size();
+    }
+
+    public boolean subnetStateContains(String subnetUuid) {
+        return subnetUuidToSubnetStateMapper.get(subnetUuid) != null;
+    }
+
+    @Override public String toString() {
+        return "SubnetHolder: { subnetUuidToSubnetStateMapper: {}" + subnetUuidToSubnetStateMapper + "}";
+    }
 }

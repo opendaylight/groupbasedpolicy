@@ -250,10 +250,6 @@ public final class ForwardingManager {
                             rEpKey, policyCtx).get(), isBviForEndpoint(rEp)).get();
                     LOG.debug("Interface added to bridge-domain {} for endpoint {}", l2FloodDomain, rEp);
 
-                    if (ConfigUtil.getInstance().isLispOverlayEnabled()) {
-                        loopbackManager.createBviLoopbackIfNeeded(rEp, l2FloodDomain);
-                    }
-
                 } catch (InterruptedException | ExecutionException e) {
                     // TODO add it to the status for renderer manager
                     LOG.warn("Interface was not added to bridge-domain {} for endpoint {}", l2FloodDomain, rEp, e);
@@ -301,9 +297,8 @@ public final class ForwardingManager {
         if (ConfigUtil.getInstance().isLispOverlayEnabled()) {
             lispStateManager.processDeleteEndpoint(rEp);
             if (ConfigUtil.getInstance().isL3FlatEnabled()) {
-                flatOverlayManager.handleEndpointDeleteForFlatOverlay(rEp);
+                flatOverlayManager.deleteStaticRoutingEntry(rEp);
             }
-            loopbackManager.handleEndpointDelete(rEp);
         }
 
         if (rEpLoc == null || Strings.isNullOrEmpty(rEpLoc.getExternalNodeConnector())) {

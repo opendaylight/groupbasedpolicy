@@ -37,6 +37,12 @@ public class LispStateCommandExecutor {
         return executeCommand(LispUtil.HOSTNAME_TO_IID.apply(hostName), lispStateCommand);
     }
 
+    public static <T extends DataObject> boolean executeMergeCommand(String hostName,
+        AbstractLispCommand<T> lispStateCommand) {
+        lispStateCommand.setOperation(General.Operations.MERGE);
+        return executeCommand(LispUtil.HOSTNAME_TO_IID.apply(hostName), lispStateCommand);
+    }
+
     public static <T extends DataObject> boolean executeDeleteCommand(InstanceIdentifier<Node> nodeIid,
             AbstractLispCommand<T> lispStateCommand) {
         lispStateCommand.setOperation(General.Operations.DELETE);

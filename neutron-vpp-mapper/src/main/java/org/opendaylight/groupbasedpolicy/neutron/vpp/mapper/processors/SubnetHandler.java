@@ -68,6 +68,7 @@ public class SubnetHandler {
             DataStoreHelper.removeIfExists(LogicalDatastoreType.CONFIGURATION,
                                            HandlerUtil.getInstanceIdentifier(gbpSubnet.getId()),
                                            rwTx);
+            DataStoreHelper.submitToDs(rwTx);
         }
     }
 }

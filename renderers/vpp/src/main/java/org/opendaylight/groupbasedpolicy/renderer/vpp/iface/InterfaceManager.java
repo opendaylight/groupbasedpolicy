@@ -254,9 +254,6 @@ public class InterfaceManager implements AutoCloseable {
             return Futures.immediateFailedFuture(new VppRendererProcessingException(message));
         }
 
-        if (ConfigUtil.getInstance().isL3FlatEnabled()) {
-            flatOverlayManager.handleInterfaceDeleteForFlatOverlay(vppEndpoint);
-        }
         return deleteIfaceOnVpp(ifaceWithoutBdCommand, vppNodeIid, vppEndpoint);
     }
 

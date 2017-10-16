@@ -180,6 +180,14 @@ public class VppIidFactory {
             .build();
     }
 
+    public static InstanceIdentifier<MappingTable> getMappingsForVni(long vni) {
+        return InstanceIdentifier.builder(NatConfig.class)
+            .child(NatInstances.class)
+            .child(NatInstance.class, new NatInstanceKey(vni))
+            .child(MappingTable.class)
+            .build();
+    }
+
     public static InstanceIdentifier<NatInstances> getNatInstancesIid() {
         return InstanceIdentifier.builder(NatConfig.class).child(NatInstances.class).build();
     }
@@ -237,10 +245,14 @@ public class VppIidFactory {
 
     public static InstanceIdentifier<LocalMapping> getLocalMappingIid(VniTableKey vniTableKey,
                                                                       LocalMappingKey localMappingKey) {
-        return getVniTableIid(vniTableKey)
-                .child(VrfSubtable.class)
-                .child(LocalMappings.class)
+        return getLocalMappings(vniTableKey)
                 .child(LocalMapping.class, localMappingKey);
+    }
+
+    public static InstanceIdentifier<LocalMappings> getLocalMappings(VniTableKey vniTableKey) {
+        return getVniTableIid(vniTableKey)
+            .child(VrfSubtable.class)
+            .child(LocalMappings.class);
     }
 
     public static InstanceIdentifier<LispFeatureData> getLispFeatureDataIid() {

@@ -10,9 +10,6 @@ package org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.info.container.state
 import org.apache.commons.lang3.mutable.MutableLong;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.Ipv4Address;
 
-/**
- * Created by Shakib Ahmed on 7/17/17.
- */
 public class VrfState {
     private SubnetHolder subnetHolder;
     private String protocolName;
@@ -42,6 +39,17 @@ public class VrfState {
     }
 
     public void removePortIpFromVrf(String portSubnetUuid, Ipv4Address portIp) {
-        subnetHolder.getSubnetState(portSubnetUuid).removeIp(portIp);
+        if (subnetHolder.subnetStateContains(portSubnetUuid)) {
+            subnetHolder.getSubnetState(portSubnetUuid).removeIp(portIp);
+        }
+    }
+
+    public int subnetCount() {
+        return subnetHolder.subnetHolderCount();
+    }
+
+    @Override public String toString() {
+        return "VrfState{" + "subnetHolder=" + subnetHolder + ", protocolName='" + protocolName + '\''
+            + ", nextRouteId=" + nextRouteId + '}';
     }
 }

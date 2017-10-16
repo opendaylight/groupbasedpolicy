@@ -8,6 +8,8 @@
 package org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.info.container.states;
 
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.Ipv4Address;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -18,6 +20,9 @@ import java.util.Set;
 public class SubnetState {
     private String gwInterfaceName;
     private Set<Ipv4Address> ipsInSubnet;
+
+    private static final Logger LOG = LoggerFactory.getLogger(SubnetState.class);
+
 
     public SubnetState() {
         ipsInSubnet = new HashSet<>();
@@ -41,6 +46,7 @@ public class SubnetState {
 
     public void addNewIp(Ipv4Address portIp) {
         ipsInSubnet.add(portIp);
+        LOG.trace("SubnetState -> added IP: {} to SubnetState: {}", portIp, this);
     }
 
     public boolean isIpPresent(Ipv4Address portIp) {
@@ -49,5 +55,14 @@ public class SubnetState {
 
     public void removeIp(Ipv4Address portIp) {
         ipsInSubnet.remove(portIp);
+        LOG.trace("SubnetState -> removed IP: {} from SubnetState: {}", portIp, this);
+    }
+
+    public Set<Ipv4Address> getIpsInSubnet() {
+        return ipsInSubnet;
+    }
+
+    @Override public String toString() {
+        return "SubnetState{" + "gwInterfaceName='" + gwInterfaceName + '\'' + ", ipsInSubnet=" + ipsInSubnet + '}';
     }
 }

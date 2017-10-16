@@ -46,4 +46,8 @@ public class RouteState {
     public List<Ipv4Address> getAllIps() {
         return new ArrayList<>(ipToRouteIdMapper.keySet());
     }
+
+    @Override public String toString() {
+        return "RouteState{" + "ipToRouteIdMapper=" + ipToRouteIdMapper + '}';
+    }
 }

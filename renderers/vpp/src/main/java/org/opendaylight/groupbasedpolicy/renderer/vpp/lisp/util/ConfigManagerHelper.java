@@ -82,72 +82,6 @@ public class ConfigManagerHelper {
         this.mountedDataBrokerProvider = mountedDataBrokerProvider;
     }
 
-    public EndpointHost getEndpointHostInformation(AddressEndpointWithLocation addressEpWithLoc) {
-        DataBroker endpointHostDataBroker = getPotentialExternalDataBroker(addressEpWithLoc).get();
-        String hostName = getHostName(addressEpWithLoc).get();
-        return new EndpointHost(endpointHostDataBroker, hostName);
-    }
-
-    public Optional<DataBroker> getPotentialExternalDataBroker(AddressEndpointWithLocation addressEpWithLoc) {
-        ExternalLocationCase externalLocationCase = resolveAndValidateLocation(addressEpWithLoc);
-        InstanceIdentifier<Node> vppNodeIid =
-                (InstanceIdentifier<Node>) externalLocationCase.getExternalNodeMountPoint();
-        String interfacePath = externalLocationCase.getExternalNodeConnector();
-
-        Optional<DataBroker>
-                potentialVppDataProvider = mountedDataBrokerProvider.resolveDataBrokerForMountPoint(vppNodeIid);
-
-        Preconditions.checkArgument(potentialVppDataProvider.isPresent(),
-                "Cannot resolve data broker for interface path: {}", interfacePath);
-
-        return potentialVppDataProvider;
-    }
-
-    public Optional<DataBroker> getPotentialExternalDataBroker(ExternalLocation externalLocation) {
-        InstanceIdentifier<Node> vppNodeIid = (InstanceIdentifier<Node>) externalLocation.getExternalNodeMountPoint();
-
-        Optional<DataBroker> potentialVppDataProvider;
-        potentialVppDataProvider = mountedDataBrokerProvider.resolveDataBrokerForMountPoint(vppNodeIid);
-
-        Preconditions.checkState(potentialVppDataProvider.isPresent(), "Data Broker missing");
-
-        return potentialVppDataProvider;
-    }
-
-    public Optional<DataBroker> getPotentialExternalDataBroker(VppEndpoint vppEp) {
-        InstanceIdentifier<Node> vppNodeIid = VppIidFactory.getNetconfNodeIid(vppEp.getVppNodeId());
-        Optional<DataBroker> potentialVppDataProvider =
-                mountedDataBrokerProvider.resolveDataBrokerForMountPoint(vppNodeIid);
-
-        Preconditions.checkArgument(potentialVppDataProvider.isPresent(),
-                "Cannot resolve data broker for Vpp Endpoint: {}", vppEp);
-        return potentialVppDataProvider;
-    }
-
-    public Optional<DataBroker> getPotentialExternalDataBroker(String hostId) {
-        InstanceIdentifier<Node> nodeIid = VppIidFactory.getNetconfNodeIid(new NodeId(hostId));
-        Optional<DataBroker> potentialVppDataProvider =
-                mountedDataBrokerProvider.resolveDataBrokerForMountPoint(nodeIid);
-        Preconditions.checkArgument(potentialVppDataProvider.isPresent(),
-                "Data Broker not found for {}", hostId);
-        return potentialVppDataProvider;
-    }
-
-    public Optional<String> getHostName(AddressEndpointWithLocation addrEp) {
-        ExternalLocationCase locationCase = resolveAndValidateLocation(addrEp);
-        NodeKey nodeKey = locationCase.getExternalNodeMountPoint().firstKeyOf(Node.class);
-        String hostId = Preconditions.checkNotNull(nodeKey.getNodeId().getValue(),
-                "Host Id extraction failed from address endpoint: {}", addrEp);
-        return Optional.fromNullable(hostId);
-    }
-
-    public Optional<String> getHostName(ExternalLocation externalLocation) {
-        NodeKey nodeKey = externalLocation.getExternalNodeMountPoint().firstKeyOf(Node.class);
-        String hostId = Preconditions.checkNotNull(nodeKey.getNodeId().getValue(),
-                "Host Id extraction failed from address endpoint: {}", externalLocation);
-
-        return Optional.fromNullable(hostId);
-    }
 
     public static ExternalLocationCase resolveAndValidateLocation(AddressEndpointWithLocation addrEpWithLoc) {
         Preconditions.checkNotNull(addrEpWithLoc.getAbsoluteLocation(), "Absolute location for " +
@@ -308,9 +242,9 @@ public class ConfigManagerHelper {
         return ip != null;
     }
 
-    public String getLispCpRlocInterfaceName(@Nonnull EndpointHost endpointHost) {
+    public String getLispCpRlocInterfaceName(@Nonnull String hostName) {
         List<Interface> operationalInterfaceList =
-                InterfaceUtil.getOperationalInterfaces(LispUtil.HOSTNAME_TO_IID.apply(endpointHost.getHostName()));
+                InterfaceUtil.getOperationalInterfaces(LispUtil.HOSTNAME_TO_IID.apply(hostName));
 
         if (operationalInterfaceList == null) {
             return null;
@@ -346,8 +280,7 @@ public class ConfigManagerHelper {
         return LispStateManager.DEFAULT_LOCATOR_SET_NAME_PREFIX + "_itr_rloc";
     }
 
-    public String constructEidMappingName(AddressEndpointWithLocation addressEp) {
-        String interfaceName = getInterfaceName(addressEp).get();
+    public String constructEidMappingName(AddressEndpointWithLocation addressEp, String interfaceName) {
         String ipAddress = getInterfaceIp(addressEp).getValue();
         return LispStateManager.DEFAULT_MAPPING_RECORD_NAME_PREFIX + interfaceName + "_" + ipAddress;
     }
@@ -367,7 +300,7 @@ public class ConfigManagerHelper {
         return LispUtil.toEid(LispUtil.toIpv4(ipPrefix), vni, Ipv4Afi.class);
     }
 
-    public String getIpWithPrefixOfEndpoint(AddressEndpointWithLocation addressEp) {
+    private static String getIpWithPrefixOfEndpoint(AddressEndpointWithLocation addressEp) {
         String ipPrefix = null;
         if (addressEp.getAddressType().equals(IpPrefixType.class)) {
             ipPrefix = addressEp.getAddress();
@@ -386,7 +319,7 @@ public class ConfigManagerHelper {
         return Preconditions.checkNotNull(ipPrefix, "No IP address found for Address Endpoint: {}", addressEp);
     }
 
-    public Ipv4Address getInterfaceIp(AddressEndpointWithLocation addressEp) {
+    public static Ipv4Address getInterfaceIp(AddressEndpointWithLocation addressEp) {
         String ipPrefix = getIpWithPrefixOfEndpoint(addressEp);
         return LispUtil.toIpv4(ipPrefix).getIpv4();
     }
@@ -421,6 +354,7 @@ public class ConfigManagerHelper {
         String interfacePath = externalLocation.getExternalNodeConnector();
         return VppPathMapper.interfacePathToInterfaceName(interfacePath);
     }
+
 
     public HmacKey getDefaultHmacKey() {
         return LispUtil.toHmacKey(HmacKeyType.Sha196Key, LispStateManager.DEFAULT_XTR_KEY);
