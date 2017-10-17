@@ -6,22 +6,22 @@
     <parent>
         <groupId>org.opendaylight.odlparent</groupId>
         <artifactId>single-feature-parent</artifactId>
-        <version>1.8.2-SNAPSHOT</version>
+        <version>1.8.3-SNAPSHOT</version>
         <relativePath/>
     </parent>
 
     <groupId>org.opendaylight.groupbasedpolicy</groupId>
     <artifactId>odl-groupbasedpolicy-base</artifactId>
-    <version>0.5.2-SNAPSHOT</version>
+    <version>0.5.3-SNAPSHOT</version>
     <packaging>feature</packaging>
 
     <name>OpenDaylight :: groupbasedpolicy :: Base Components</name>
 
     <properties>
-        <config.version>0.6.2-SNAPSHOT</config.version>
-        <controller.mdsal.version>1.5.2-SNAPSHOT</controller.mdsal.version>
-        <mdsal.binding.base.model>0.10.2-SNAPSHOT</mdsal.binding.base.model>
-        <mdsal.binding.base>2.2.2-SNAPSHOT</mdsal.binding.base>
+        <config.version>0.6.3-SNAPSHOT</config.version>
+        <controller.mdsal.version>1.5.3-SNAPSHOT</controller.mdsal.version>
+        <mdsal.binding.base.model>0.10.3-SNAPSHOT</mdsal.binding.base.model>
+        <mdsal.binding.base>2.2.3-SNAPSHOT</mdsal.binding.base>
         <config.configfile.directory>etc/opendaylight/karaf</config.configfile.directory>
     </properties>
 

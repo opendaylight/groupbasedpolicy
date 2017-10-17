@@ -6,13 +6,13 @@
     <parent>
         <groupId>org.opendaylight.odlparent</groupId>
         <artifactId>single-feature-parent</artifactId>
-        <version>1.8.2-SNAPSHOT</version>
+        <version>1.8.3-SNAPSHOT</version>
         <relativePath/>
     </parent>
 
     <groupId>org.opendaylight.groupbasedpolicy</groupId>
     <artifactId>odl-groupbasedpolicy-ios-xe</artifactId>
-    <version>0.5.2-SNAPSHOT</version>
+    <version>0.5.3-SNAPSHOT</version>
     <packaging>feature</packaging>
     <!--
        IOS-XE renderer
@@ -20,9 +20,9 @@
     <name>OpenDaylight :: groupbasedpolicy :: ios-xe renderer</name>
 
     <properties>
-        <sfc.version>0.5.2-SNAPSHOT</sfc.version>
-        <sxp.version>1.4.2-SNAPSHOT</sxp.version>
-        <netconf.version>1.2.2-SNAPSHOT</netconf.version>
+        <sfc.version>0.5.3-SNAPSHOT</sfc.version>
+        <sxp.version>1.4.3-SNAPSHOT</sxp.version>
+        <netconf.version>1.2.3-SNAPSHOT</netconf.version>
     </properties>
 
     <dependencyManagement>
