@@ -26,6 +26,7 @@ import org.opendaylight.groupbasedpolicy.renderer.vpp.config.ConfigUtil;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.exception.LispConfigCommandFailedException;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.exception.LispNotFoundException;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.flat.overlay.FlatOverlayManager;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.flat.overlay.StaticRoutingHelper;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.info.container.EndpointHost;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.info.container.HostRelatedInfoContainer;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.info.container.states.LispState;
@@ -112,9 +113,11 @@ public class LispStateManager {
                 String eidMappingName = lispStateHelper.constructEidMappingName(addressEp, interfaceName);
 
                 addVniSpecificConfigurationsIfNeeded(hostname, vni, vrf);
-
-                if (!addEidInEidTable(hostname, eid, eidMappingName)) {
-                    LOG.warn("Failed to add Eid: {}, eidMappingName: {} to table on host: {}", eid, eidMappingName, hostname);
+                if (!ConfigManagerHelper.isMetadataPort(addressEp)) {
+                    if (!addEidInEidTable(hostname, eid, eidMappingName)) {
+                        LOG.warn("Failed to add Eid: {}, eidMappingName: {} to table on host: {}", eid, eidMappingName,
+                            hostname);
+                    }
                 }
             } catch (LispConfigCommandFailedException e) {
                 LOG.warn("Lisp endpoint configuration failed for address endpoint: {}", addressEp);
@@ -310,9 +313,11 @@ public class LispStateManager {
                 long vni = getVni(addressEp.getTenant().getValue());
                 Eid eid = lispStateHelper.getEid(addressEp, vni);
                 String eidMappingName = lispStateHelper.constructEidMappingName(addressEp, interfaceName);
-
-                if (!deleteEidFromLocalEidTableOfHost(hostname, eid, eidMappingName)){
-                    LOG.warn("Failed to delete Eid : {}, eidMappingName: {} on host: {}", eid, eidMappingName, hostname);
+                if (!ConfigManagerHelper.isMetadataPort(addressEp)) {
+                    if (!deleteEidFromLocalEidTableOfHost(hostname, eid, eidMappingName)) {
+                        LOG.warn("Failed to delete Eid : {}, eidMappingName: {} on host: {}", eid, eidMappingName,
+                            hostname);
+                    }
                 }
 
                 Optional<LocalMappings> localMappingsOptional =

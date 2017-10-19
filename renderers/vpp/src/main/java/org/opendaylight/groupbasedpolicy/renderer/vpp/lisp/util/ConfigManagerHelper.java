@@ -382,8 +382,8 @@ public class ConfigManagerHelper {
         return addedEp.getRelativeLocations() != null && addedEp.getRelativeLocations().getExternalLocation() != null;
     }
 
-    public boolean isMetadataPort(AddressEndpointWithLocation addressEp) {
-        return hasRelativeLocations(addressEp) || IpAddressUtil.isMetadataIp(getInterfaceIp(addressEp));
+    public static boolean isMetadataPort(AddressEndpointWithLocation addressEp) {
+        return IpAddressUtil.isMetadataIp(getInterfaceIp(addressEp));
     }
 
     public String getGatewayInterfaceName(String gwNamePrefix, String subnetUuid) {
