@@ -231,6 +231,10 @@ public class LoopbackManager {
 
     private boolean addUnnumberedInterface(String hostname, String neutronInterfaceName, String loopbackName) {
         InstanceIdentifier<Node> nodeIid = VppIidFactory.getNetconfNodeIid(new NodeId(hostname));
+        if (neutronInterfaceName.equalsIgnoreCase(loopbackName)) {
+            LOG.trace("No need to configure unnumbered for loopback: {} on host: {}. skip processing.", loopbackName, neutronInterfaceName);
+            return true;
+        }
         LOG.trace("Adding unnumbered configuration hostname: {}, interface: {} use : {}", hostname, neutronInterfaceName, loopbackName);
         boolean unnumberWritten = putUnnumberedInterface(nodeIid, neutronInterfaceName, loopbackName);
         if (unnumberWritten) {
@@ -313,17 +317,17 @@ public class LoopbackManager {
                 InstanceIdentifier<Node> iid = VppIidFactory.getNetconfNodeIid(new NodeId(loopbackDetail.getHostName()));
 
                 if (deleteSpecificLoopback(iid, loopIntfcName)) {
-                    if (deleteProxyArpRange(loopbackDetail.getHostName(), loopbackDetail.getLoopbackCommand().getVrfId(), gbpSubnet)) {
+                    if (!deleteProxyArpRange(loopbackDetail.getHostName(), loopbackDetail.getLoopbackCommand().getVrfId(), gbpSubnet)) {
                         LOG.warn("Failed to delete ProxyArpRange: {} on host: {}", gbpSubnet.getAllocationPools(), loopbackDetail.getHostName());
                     }
 
-                    if (deleteGpeEntry(iid, Constants.GPE_ENTRY_PREFIX + gbpSubnet.getId() + "_1")) {
+                    if (!deleteGpeEntry(iid, Constants.GPE_ENTRY_PREFIX + gbpSubnet.getId() + "_1")) {
                         LOG.warn("Failed to delete gpeEntry: {} on host: {}", Constants.GPE_ENTRY_PREFIX + gbpSubnet.getId() + "_1", loopbackDetail.getHostName());
                     }
-                    if (deleteGpeEntry(iid, Constants.GPE_ENTRY_PREFIX + gbpSubnet.getId() + "_2")) {
+                    if (!deleteGpeEntry(iid, Constants.GPE_ENTRY_PREFIX + gbpSubnet.getId() + "_2")) {
                         LOG.warn("Failed to delete gpeEntry: {} on host: {}", Constants.GPE_ENTRY_PREFIX + gbpSubnet.getId() + "_2", loopbackDetail.getHostName());
                     }
-                    if (deleteGpeFeatureData(loopbackDetail.getHostName())) {
+                    if (!deleteGpeFeatureData(loopbackDetail.getHostName())) {
                         LOG.warn("Failed to delete gpe configuration: {} on host: {}", loopbackDetail.getHostName());
                     }
 

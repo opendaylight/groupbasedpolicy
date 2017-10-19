@@ -176,12 +176,12 @@ public class FlatOverlayManager {
                         VppIidFactory.getVppRendererConfig().child(VppEndpoint.class, vppEndpointKey), rTx);
                 rTx.close();
                 if (!vppEp.isPresent()) {
-                    LOG.error("Failed to add route for endpoint {}. Interface not created yet.", addressEp);
+                    LOG.warn("Failed to add route for endpoint {}. Interface not created yet.", addressEp);
                     return;
                 }
             }
         }
-        
+
         Map<String, String> hostnamesAndIntfcs = resolveIntfcsByHosts(addressEp);
         long vni = getVni(addressEp.getTenant().getValue());
         long vrf = vni;

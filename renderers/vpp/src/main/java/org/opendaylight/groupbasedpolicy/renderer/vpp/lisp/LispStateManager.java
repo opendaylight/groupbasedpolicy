@@ -332,10 +332,12 @@ public class LispStateManager {
                     if (GbpNetconfTransaction.netconfSyncedDelete(VppIidFactory.getNetconfNodeIid(new NodeId(hostname)),
                         VppIidFactory.getVniTableIid(new VniTableKey(vni)), GbpNetconfTransaction.RETRY_COUNT)) {
                         Preconditions.checkNotNull(hostname);
-                        vnisByHostname.get(hostname).remove(vni);
+                        if (vnisByHostname.get(hostname) != null) {
+                            vnisByHostname.get(hostname).remove(vni);
+                        }
                     }
                 }
-                if (vnisByHostname.get(hostname).size() == 0) {
+                if (vnisByHostname.get(hostname)!= null && vnisByHostname.get(hostname).size() == 0) {
                     //safe to delete lisp
                     deleteLispStatesFromHost(hostname);
                     deleteNativeForwardPathsTables(hostname);
