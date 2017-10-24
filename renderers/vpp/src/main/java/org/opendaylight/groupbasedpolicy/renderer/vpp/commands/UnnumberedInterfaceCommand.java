@@ -9,6 +9,7 @@
 package org.opendaylight.groupbasedpolicy.renderer.vpp.commands;
 
 import com.google.common.base.Preconditions;
+
 import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.General;
@@ -101,7 +102,7 @@ public class UnnumberedInterfaceCommand extends AbstractConfigCommand {
         }
 
         /**
-         * StaticArpCommand build method.
+         * UnnumberedInterfaceCommand build method.
          *
          * @return UnnumberedInterfaceCommand
          * @throws IllegalArgumentException if useInterface or interfaceName is null.

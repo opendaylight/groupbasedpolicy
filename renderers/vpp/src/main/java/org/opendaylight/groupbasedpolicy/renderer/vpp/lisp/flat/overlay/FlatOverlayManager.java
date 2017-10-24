@@ -8,6 +8,8 @@
 
 package org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.flat.overlay;
 
+import com.google.common.base.Optional;
+
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -20,13 +22,10 @@ import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.commands.StaticArpCommand;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.iface.VppPathMapper;
-import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.info.container.EndpointHost;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.info.container.HostRelatedInfoContainer;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.info.container.states.PhysicalInterfaces;
-import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.info.container.states.PortInterfaces;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.mappers.NeutronTenantToVniMapper;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.util.ConfigManagerHelper;
-import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.util.Constants;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.util.IpAddressUtil;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.listener.VppEndpointListener;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.routing.RoutingManager;
@@ -48,7 +47,6 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpo
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev170511.IpPrefixType;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.endpoints.AddressEndpointWithLocation;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.Config;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425._interface.attributes._interface.type.choice.TapCase;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.config.VppEndpoint;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.config.VppEndpointKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev170607.interfaces._interface.Routing;
@@ -58,9 +56,6 @@ import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.google.common.base.Optional;
-import com.google.common.base.Preconditions;
 
 public class FlatOverlayManager {
     private static final Logger LOG = LoggerFactory.getLogger(FlatOverlayManager.class);
@@ -79,7 +74,7 @@ public class FlatOverlayManager {
     public FlatOverlayManager(@Nonnull DataBroker dataBroker,
                               @Nonnull MountedDataBrokerProvider mountedDataBrokerProvider,
                               @Nonnull VppEndpointListener vppEndpointListener) {
-        this.overlayHelper = new ConfigManagerHelper(mountedDataBrokerProvider);
+        this.overlayHelper = new ConfigManagerHelper();
         staticRoutingHelper = new StaticRoutingHelper();
         this.dataBroker = dataBroker;
         this.vppEndpointListener = vppEndpointListener;
@@ -91,18 +86,10 @@ public class FlatOverlayManager {
     }
 
     private void addInterfaceInVrf(String hostName, String interfaceName, long vrf) {
-        if (hostRelatedInfoContainer.getPortInterfaceStateOfHost(hostName)
-                .isVrfConfiguredForInterface(interfaceName)) {
-            return;
-        }
-
         if (!putVrfInInterface(hostName, interfaceName, vrf)) {
             LOG.warn("Failed to put interface {} to vrf {}", interfaceName, vrf);
         } else {
-            hostRelatedInfoContainer
-                    .getPortInterfaceStateOfHost(hostName)
-                    .initializeRoutingContextForInterface(interfaceName, vrf);
-            LOG.debug("Added interface {} to vrf {}", interfaceName, vrf);
+            LOG.trace("Added interface {} to vrf {}", interfaceName, vrf);
         }
     }
 
@@ -110,7 +97,7 @@ public class FlatOverlayManager {
         InstanceIdentifier<Routing> iid = VppIidFactory.getRoutingIid(new InterfaceKey(interfaceName));
         RoutingBuilder builder = new RoutingBuilder();
         builder.setIpv4VrfId(vrf);
-        return GbpNetconfTransaction.netconfSyncedWrite(LispUtil.HOSTNAME_TO_IID.apply(hostName), iid,
+        return GbpNetconfTransaction.netconfSyncedWrite(LispUtil.hostnameToIid(hostName), iid,
                 builder.build(), GbpNetconfTransaction.RETRY_COUNT);
     }
 
@@ -152,7 +139,7 @@ public class FlatOverlayManager {
         staticArpCommandBuilder.setIp(ip);
         staticArpCommandBuilder.setLinkLayerAddress(physAddress);
 
-        return GbpNetconfTransaction.netconfSyncedWrite(LispUtil.HOSTNAME_TO_IID.apply(hostName),
+        return GbpNetconfTransaction.netconfSyncedWrite(LispUtil.hostnameToIid(hostName),
                 staticArpCommandBuilder.build(), GbpNetconfTransaction.RETRY_COUNT);
     }
 
@@ -200,7 +187,8 @@ public class FlatOverlayManager {
         Map<String, String> hostnamesAndIntfcs = new HashMap<>();
         if (addressEp.getRelativeLocations() != null
             && addressEp.getRelativeLocations().getExternalLocation() != null) {
-            LOG.trace("deleteStaticRoutingEntry -> addresEp locations: {}", addressEp.getRelativeLocations().getExternalLocation());
+            LOG.trace("deleteStaticRoutingEntry -> addresEp locations: {}",
+                addressEp.getRelativeLocations().getExternalLocation());
             addressEp.getRelativeLocations().getExternalLocation().forEach(externalLocation -> {
                 Optional<String> interfaceOptional =
                     VppPathMapper.interfacePathToInterfaceName(externalLocation.getExternalNodeConnector());
@@ -233,7 +221,7 @@ public class FlatOverlayManager {
     private boolean addStaticRoute(Long routeId, String hostName, long vrfId, Ipv4Address ipWithoutPrefix,
             Ipv4Prefix ipv4Prefix, String outgoingInterfaceName) {
         if (vrfsByHostname.get(hostName) == null || !vrfsByHostname.get(hostName).keySet().contains(vrfId)) {
-            if (staticRoutingHelper.addRoutingProtocolForVrf(LispUtil.HOSTNAME_TO_IID.apply(hostName), vrfId)) {
+            if (staticRoutingHelper.addRoutingProtocolForVrf(LispUtil.hostnameToIid(hostName), vrfId)) {
                 addStaticRouteToPublicInterface(hostName, vrfId);
                 countPlusPlus(hostName, vrfId);
             }
@@ -317,13 +305,16 @@ public class FlatOverlayManager {
         Map<String, String> hostnamesAndIntfcs = resolveIntfcsByHosts(addressEp);
         LOG.trace("deleteStaticRoutingEntry -> addresEp locations: {}", addressEp);
         hostnamesAndIntfcs.entrySet().forEach(intfcsByHost -> {
-            LOG.trace("deleteStaticRoutingEntry -> Deleting addresEp: {} for interface: {}, on node: {}", addressEp.getKey(), intfcsByHost.getValue(), intfcsByHost.getKey());
+            LOG.trace("deleteStaticRoutingEntry -> Deleting addresEp: {} for interface: {}, on node: {}",
+                addressEp.getKey(), intfcsByHost.getValue(), intfcsByHost.getKey());
             Ipv4Address ipWithoutPrefix = ConfigManagerHelper.getInterfaceIp(addressEp);
-            if (!staticRoutingHelper.deleteSingleStaticRouteFromRoutingProtocol(intfcsByHost.getKey(), vrfId, routeId.get())) {
+            if (!staticRoutingHelper.deleteSingleStaticRouteFromRoutingProtocol(intfcsByHost.getKey(), vrfId,
+                routeId.get())) {
                 LOG.warn("Failed to delete route ({} via {}) from vrf {} from host{}", ipWithoutPrefix,
                     intfcsByHost.getValue(), vrfId, intfcsByHost);
             } else {
-                LOG.trace("deletedStaticRoutingEntry -> Deleted addresEp: {} for interface: {}, on node: {}", addressEp.getKey(), intfcsByHost.getValue(), intfcsByHost.getKey());
+                LOG.trace("deletedStaticRoutingEntry -> Deleted addresEp: {} for interface: {}, on node: {}",
+                    addressEp.getKey(), intfcsByHost.getValue(), intfcsByHost.getKey());
                 countMinusMinus(intfcsByHost.getKey(), vrfId);
                 if (getRouteCount(intfcsByHost.getKey(), vrfId) <= 1) {
                     LOG.info("deletedStaticRoutingEntry -> Removing route to public int from VRF {}", vrfId);
@@ -337,7 +328,8 @@ public class FlatOverlayManager {
                     }
                 }
                 LOG.trace("deleteStaticRoutingEntry -> flushPendingVppEndpoint for addresEp: {}", addressEp);
-                hostRelatedInfoContainer.deleteRouteFromIntfc(intfcsByHost.getKey(), intfcsByHost.getValue(), routeId.get());
+                hostRelatedInfoContainer.deleteRouteFromIntfc(intfcsByHost.getKey(), intfcsByHost.getValue(),
+                    routeId.get());
                 vppEndpointListener.flushPendingVppEndpoint(intfcsByHost.getKey(), intfcsByHost.getValue());
                 LOG.debug("Delete Static Route ({} via {}) from vrf {} from host {}", ipWithoutPrefix,
                         intfcsByHost.getValue(), vrfId, intfcsByHost);

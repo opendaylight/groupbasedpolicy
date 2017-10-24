@@ -18,8 +18,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import javax.annotation.Nonnull;
-
 import org.apache.commons.lang3.tuple.Pair;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.commands.LoopbackCommand;
@@ -30,7 +28,7 @@ import org.opendaylight.groupbasedpolicy.renderer.vpp.commands.lisp.AbstractLisp
 import org.opendaylight.groupbasedpolicy.renderer.vpp.commands.lisp.LispCommandWrapper;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.LispStateCommandExecutor;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.exception.LispConfigCommandFailedException;
-import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.exception.LispHelperArgumentException;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.exception.LispArgumentException;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.flat.overlay.FlatOverlayManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.mappers.NeutronTenantToVniMapper;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.util.ConfigManagerHelper;
@@ -39,7 +37,6 @@ import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.util.IpAddressUtil;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.GbpNetconfTransaction;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.General;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.LispUtil;
-import org.opendaylight.groupbasedpolicy.renderer.vpp.util.MountedDataBrokerProvider;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.VppIidFactory;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.Ipv4Address;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.Ipv4Prefix;
@@ -64,39 +61,39 @@ import org.slf4j.LoggerFactory;
 public class LoopbackManager {
     private static final Logger LOG = LoggerFactory.getLogger(LoopbackManager.class);
 
-    private ConfigManagerHelper loopbackManagerHelper;
+    private ConfigManagerHelper configManagerHelper;
     private Table<NodeKey, String, List<String>> unnumberedCache = HashBasedTable.create();
 
     private NeutronTenantToVniMapper neutronTenantToVniMapper = NeutronTenantToVniMapper.getInstance();
 
 
-    Map<String, GbpSubnet> GbpSubnetCache = new HashMap<>();
-    Map<String, List<LoopBackDetails>> loopBackHostnames = new HashMap<>();
+    private Map<String, GbpSubnet> GbpSubnetCache = new HashMap<>();
+    private Map<String, List<LoopBackDetails>> loopBackHostnames = new HashMap<>();
 
     private class LoopBackDetails {
-        LoopbackCommand loopbackCommand;
-        String hostName;
+        private LoopbackCommand loopbackCommand;
+        private String hostName;
 
-        public LoopbackCommand getLoopbackCommand() {
+        LoopbackCommand getLoopbackCommand() {
             return loopbackCommand;
         }
 
-        public void setLoopbackCommand(LoopbackCommand loopbackCommand) {
+        void setLoopbackCommand(LoopbackCommand loopbackCommand) {
             this.loopbackCommand = loopbackCommand;
         }
 
-        public String getHostName() {
+        String getHostName() {
             return hostName;
         }
 
-        public void setHostName(String hostName) {
+        void setHostName(String hostName) {
             this.hostName = hostName;
         }
     }
 
 
-    public LoopbackManager(@Nonnull MountedDataBrokerProvider mountedDataBrokerProvider) {
-        this.loopbackManagerHelper = new ConfigManagerHelper(mountedDataBrokerProvider);
+    public LoopbackManager() {
+        this.configManagerHelper = new ConfigManagerHelper();
     }
 
     public void createSimpleLoopbackIfNeeded(AddressEndpointWithLocation addressEp) {
@@ -109,7 +106,7 @@ public class LoopbackManager {
             try {
                 long vni = getVni(addressEp.getTenant().getValue());
                 long vrfId = vni;
-                String subnetUuid = loopbackManagerHelper.getSubnet(addressEp);
+                String subnetUuid = configManagerHelper.getSubnet(addressEp);
                 GbpSubnet gbpSubnetInfo = GbpSubnetCache.get(subnetUuid);
                 String loopIntfcName = Constants.GW_NAME_PREFIX + subnetUuid;
 
@@ -121,8 +118,8 @@ public class LoopbackManager {
                             GbpNetconfTransaction.RETRY_COUNT);
                     if (!optionalLoopback.isPresent()) {
                         LoopbackCommand simpleLoopbackCommand =
-                            LoopbackCommandWrapper.simpleLoopbackPutCommand(loopIntfcName, vrfId, gbpSubnetInfo.getGatewayIp(),
-                                gbpSubnetInfo.getCidr());
+                            LoopbackCommandWrapper.simpleLoopbackPutCommand(loopIntfcName, vrfId,
+                                gbpSubnetInfo.getGatewayIp(), gbpSubnetInfo.getCidr());
                         if (createLoopbackInterface(hostname, simpleLoopbackCommand)) {
                             addGpeEntry(VppIidFactory.getNetconfNodeIid(new NodeId(hostname)), gbpSubnetInfo, vni);
                             addProxyArpRange(hostname, vrfId, gbpSubnetInfo);
@@ -139,7 +136,8 @@ public class LoopbackManager {
                             }
                         }
                     } else {
-                        LOG.trace("Loopback already present on host: {} skip update for: {} - {} in vrf: {}", hostname, loopIntfcName, gbpSubnetInfo.getGatewayIp(), vrfId);
+                        LOG.trace("Loopback already present on host: {} skip update for: {} - {} in vrf: {}", hostname,
+                            loopIntfcName, gbpSubnetInfo.getGatewayIp(), vrfId);
                     }
                 }
 
@@ -232,16 +230,19 @@ public class LoopbackManager {
     private boolean addUnnumberedInterface(String hostname, String neutronInterfaceName, String loopbackName) {
         InstanceIdentifier<Node> nodeIid = VppIidFactory.getNetconfNodeIid(new NodeId(hostname));
         if (neutronInterfaceName.equalsIgnoreCase(loopbackName)) {
-            LOG.trace("No need to configure unnumbered for loopback: {} on host: {}. skip processing.", loopbackName, neutronInterfaceName);
+            LOG.trace("No need to configure unnumbered for loopback: {} on host: {}. skip processing.", loopbackName,
+                neutronInterfaceName);
             return true;
         }
-        LOG.trace("Adding unnumbered configuration hostname: {}, interface: {} use : {}", hostname, neutronInterfaceName, loopbackName);
+        LOG.trace("Adding unnumbered configuration hostname: {}, interface: {} use : {}", hostname,
+            neutronInterfaceName, loopbackName);
         boolean unnumberWritten = putUnnumberedInterface(nodeIid, neutronInterfaceName, loopbackName);
         if (unnumberWritten) {
             if (unnumberedCache.get(nodeIid.firstKeyOf(Node.class), loopbackName) != null) {
                 unnumberedCache.get(nodeIid.firstKeyOf(Node.class), loopbackName).add(neutronInterfaceName);
             } else {
-                unnumberedCache.put(nodeIid.firstKeyOf(Node.class), loopbackName, Lists.newArrayList(neutronInterfaceName));
+                unnumberedCache.put(nodeIid.firstKeyOf(Node.class), loopbackName,
+                    Lists.newArrayList(neutronInterfaceName));
             }
             LOG.debug("Added Interface {} as unnumbered for {}", loopbackName, neutronInterfaceName);
         }
@@ -280,7 +281,7 @@ public class LoopbackManager {
             if (!putGpeEntry(iid, Constants.GPE_ENTRY_PREFIX + gbpSubnetInfo.getId() + "_2", secondREid, vni, vni)) {
                 LOG.warn("Failed to write GPE entry: {}", Constants.GPE_ENTRY_PREFIX + gbpSubnetInfo.getId() + "_2");
             }
-        } catch (LispHelperArgumentException e) {
+        } catch (LispArgumentException e) {
             e.printStackTrace();
         }
     }
@@ -314,18 +315,23 @@ public class LoopbackManager {
         if (loopBackDetails != null) {
             loopBackDetails.forEach(loopbackDetail -> {
 
-                InstanceIdentifier<Node> iid = VppIidFactory.getNetconfNodeIid(new NodeId(loopbackDetail.getHostName()));
+                InstanceIdentifier<Node> iid =
+                    VppIidFactory.getNetconfNodeIid(new NodeId(loopbackDetail.getHostName()));
 
                 if (deleteSpecificLoopback(iid, loopIntfcName)) {
-                    if (!deleteProxyArpRange(loopbackDetail.getHostName(), loopbackDetail.getLoopbackCommand().getVrfId(), gbpSubnet)) {
-                        LOG.warn("Failed to delete ProxyArpRange: {} on host: {}", gbpSubnet.getAllocationPools(), loopbackDetail.getHostName());
+                    if (!deleteProxyArpRange(loopbackDetail.getHostName(),
+                        loopbackDetail.getLoopbackCommand().getVrfId(), gbpSubnet)) {
+                        LOG.warn("Failed to delete ProxyArpRange: {} on host: {}", gbpSubnet.getAllocationPools(),
+                            loopbackDetail.getHostName());
                     }
 
                     if (!deleteGpeEntry(iid, Constants.GPE_ENTRY_PREFIX + gbpSubnet.getId() + "_1")) {
-                        LOG.warn("Failed to delete gpeEntry: {} on host: {}", Constants.GPE_ENTRY_PREFIX + gbpSubnet.getId() + "_1", loopbackDetail.getHostName());
+                        LOG.warn("Failed to delete gpeEntry: {} on host: {}",
+                            Constants.GPE_ENTRY_PREFIX + gbpSubnet.getId() + "_1", loopbackDetail.getHostName());
                     }
                     if (!deleteGpeEntry(iid, Constants.GPE_ENTRY_PREFIX + gbpSubnet.getId() + "_2")) {
-                        LOG.warn("Failed to delete gpeEntry: {} on host: {}", Constants.GPE_ENTRY_PREFIX + gbpSubnet.getId() + "_2", loopbackDetail.getHostName());
+                        LOG.warn("Failed to delete gpeEntry: {} on host: {}",
+                            Constants.GPE_ENTRY_PREFIX + gbpSubnet.getId() + "_2", loopbackDetail.getHostName());
                     }
                     if (!deleteGpeFeatureData(loopbackDetail.getHostName())) {
                         LOG.warn("Failed to delete gpe configuration: {} on host: {}", loopbackDetail.getHostName());

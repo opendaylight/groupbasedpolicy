@@ -17,7 +17,7 @@ import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 
 public class ConfigureLocalMappingInEidTableCommand extends AbstractLispCommand<LocalMapping> {
 
-    LocalMappingDom localMappingDom;
+    private LocalMappingDom localMappingDom;
 
     public ConfigureLocalMappingInEidTableCommand(LocalMappingDom localMappingDom) {
         this.localMappingDom = localMappingDom;

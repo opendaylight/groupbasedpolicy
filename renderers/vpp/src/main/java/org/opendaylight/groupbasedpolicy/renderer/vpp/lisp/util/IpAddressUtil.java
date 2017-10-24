@@ -9,25 +9,23 @@
 package org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.util;
 
 import com.google.common.net.InetAddresses;
+
+import java.net.InetAddress;
+import java.net.UnknownHostException;
+
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.commons.net.util.SubnetUtils;
-import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.exception.LispHelperArgumentException;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.exception.LispArgumentException;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.Ipv4Address;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.Ipv4Prefix;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.net.InetAddress;
-import java.net.UnknownHostException;
-
-/**
- * Created by Shakib Ahmed on 5/3/17.
- */
 public class IpAddressUtil {
     private static final Logger LOG = LoggerFactory.getLogger(IpAddressUtil.class);
 
-    public static boolean isMetadataIp(Ipv4Address ipv4Address) {
+    static boolean isMetadataIp(Ipv4Address ipv4Address) {
         return ipv4Address.getValue().equals(Constants.METADATA_IP);
     }
 
@@ -39,7 +37,7 @@ public class IpAddressUtil {
         return new ImmutablePair<>(lowIp, highIp);
     }
 
-    public static Pair<Ipv4Prefix, Ipv4Prefix> getSmallerSubnet(Ipv4Prefix ipv4Prefix) throws LispHelperArgumentException {
+    public static Pair<Ipv4Prefix, Ipv4Prefix> getSmallerSubnet(Ipv4Prefix ipv4Prefix) throws LispArgumentException {
         String cidrNotion = ipv4Prefix.getValue();
 
         SubnetUtils subnetUtils = new SubnetUtils(cidrNotion);
@@ -62,7 +60,7 @@ public class IpAddressUtil {
             secondSubnet = secondAddress + "/" + maskLen;
         } catch (UnknownHostException e) {
             LOG.warn("Failed to translate IP address " + cidrNotion+ " to smaller subnet");
-            throw new LispHelperArgumentException("Invalid argument for subnet " + cidrNotion);
+            throw new LispArgumentException("Invalid argument for subnet " + cidrNotion);
         }
         return new ImmutablePair<>(new Ipv4Prefix(firstSubnet), new Ipv4Prefix(secondSubnet));
     }
@@ -71,7 +69,7 @@ public class IpAddressUtil {
         return new Ipv4Prefix(ipv4Address.getValue() + "/32");
     }
 
-    public static boolean ipInRange(Ipv4Address ip, String startIpStr, String endIpStr) {
+    static boolean ipInRange(Ipv4Address ip, String startIpStr, String endIpStr) {
         String ipStr = ip.getValue();
 
         int startLim = InetAddresses.coerceToInteger(InetAddresses.forString(startIpStr));
@@ -85,15 +83,15 @@ public class IpAddressUtil {
         return (startUnsigned <= ipNumUnsigned) && (ipNumUnsigned <= endUnsigned);
     }
 
-    public static String startIpOfSubnet(String cidrNotion) {
+    static String startIpOfSubnet(String cidrNotion) {
         return new SubnetUtils(cidrNotion).getInfo().getLowAddress();
     }
 
-    public static String endIpOfSubnet(String cidrNotion) {
+    static String endIpOfSubnet(String cidrNotion) {
         return new SubnetUtils(cidrNotion).getInfo().getHighAddress();
     }
 
-    public static int maskLen(String cidrNotion) {
+    static int maskLen(String cidrNotion) {
         return Integer.valueOf(cidrNotion.split("/")[1]);
     }
 }

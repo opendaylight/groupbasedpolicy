@@ -15,7 +15,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 
 public class ConfigureMapResolverCommand extends AbstractLispCommand<MapResolver>{
-    MapResolverDom mapResolverDom;
+    private MapResolverDom mapResolverDom;
 
     public ConfigureMapResolverCommand(MapResolverDom mapResolverDom) {
         this.mapResolverDom = mapResolverDom;

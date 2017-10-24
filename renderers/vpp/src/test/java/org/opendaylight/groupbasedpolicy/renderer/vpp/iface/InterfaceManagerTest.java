@@ -102,7 +102,7 @@ public class InterfaceManagerTest extends CustomDataBrokerTest {
         dataBroker = getDataBroker();
         Mockito.when(mountedDataProviderMock.resolveDataBrokerForMountPoint(Mockito.any(InstanceIdentifier.class)))
             .thenReturn(Optional.of(mountPointDataBroker));
-        manager = new InterfaceManager(mountedDataProviderMock, dataBroker, flatOverlayManager);
+        manager = new InterfaceManager(mountedDataProviderMock, dataBroker);
     }
 
     @Test

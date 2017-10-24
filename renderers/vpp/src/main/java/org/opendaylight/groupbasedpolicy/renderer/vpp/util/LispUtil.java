@@ -31,19 +31,14 @@ import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.topology.Node;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 
-import com.google.common.base.Function;
-
-/**
- * Created by Shakib Ahmed on 3/21/17.
- */
 public class LispUtil {
     private LispUtil() {
 
     }
 
-    public static Function<String, InstanceIdentifier<Node>> HOSTNAME_TO_IID = host -> {
-        return VppIidFactory.getNetconfNodeIid(new NodeId(host));
-    };
+    public static InstanceIdentifier<Node> hostnameToIid(String hostName) {
+        return VppIidFactory.getNetconfNodeIid(new NodeId(hostName));
+    }
 
     public static Eid toEid(Address address, long vni, Class<? extends LispAddressFamily> addressType) {
         EidDom eidDom = new EidDom();

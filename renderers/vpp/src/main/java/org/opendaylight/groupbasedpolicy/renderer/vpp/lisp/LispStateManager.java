@@ -17,8 +17,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
 
-import javax.annotation.Nonnull;
-
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.commands.lisp.AbstractLispCommand;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.commands.lisp.LispCommandWrapper;
@@ -26,23 +24,16 @@ import org.opendaylight.groupbasedpolicy.renderer.vpp.config.ConfigUtil;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.exception.LispConfigCommandFailedException;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.exception.LispNotFoundException;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.flat.overlay.FlatOverlayManager;
-import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.flat.overlay.StaticRoutingHelper;
-import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.info.container.EndpointHost;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.info.container.HostRelatedInfoContainer;
-import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.info.container.states.LispState;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.info.container.states.PhysicalInterfaces;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.mappers.NeutronTenantToVniMapper;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.util.ConfigManagerHelper;
-import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.util.Constants;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.GbpNetconfTransaction;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.LispUtil;
-import org.opendaylight.groupbasedpolicy.renderer.vpp.util.MountedDataBrokerProvider;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.VppIidFactory;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.IpAddress;
-import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.nat.rev150908.nat.config.nat.instances.nat.instance.MappingTable;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev170511.IpPrefixType;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.endpoints.AddressEndpointWithLocation;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.gpe.rev170801.Gpe;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.gpe.rev170801.NativeForwardPathsTables;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.gpe.rev170801._native.forward.paths.tables._native.forward.paths.table.NativeForwardPath;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.gpe.rev170801.gpe.feature.data.grouping.GpeFeatureData;
@@ -73,7 +64,6 @@ public class LispStateManager {
     private static final Logger LOG = LoggerFactory.getLogger(LispStateManager.class);
 
     private HostRelatedInfoContainer hostRelatedInfoContainer;
-    private MountedDataBrokerProvider mountedDataBrokerProvider;
     private ConfigManagerHelper lispStateHelper;
 
     private NeutronTenantToVniMapper neutronTenantToVniMapper;
@@ -87,12 +77,9 @@ public class LispStateManager {
     // Node ID, VRF ID, route count
     private Map<String, List<Long>> vnisByHostname = new HashMap<>();
 
-    public LispStateManager(@Nonnull MountedDataBrokerProvider mountedDataBrokerProvider) {
-        Preconditions.checkNotNull(mountedDataBrokerProvider,
-                "MountedDataBrokerProvider found to be null!");
+    public LispStateManager() {
         hostRelatedInfoContainer = HostRelatedInfoContainer.getInstance();
-        this.mountedDataBrokerProvider= mountedDataBrokerProvider;
-        this.lispStateHelper = new ConfigManagerHelper(this.mountedDataBrokerProvider);
+        this.lispStateHelper = new ConfigManagerHelper();
         neutronTenantToVniMapper = NeutronTenantToVniMapper.getInstance();
     }
 
@@ -136,14 +123,17 @@ public class LispStateManager {
 
             try {
                 boolean lispEnabled = enableLispOnHost(hostName);
-                Optional<GpeFeatureData> gpeFeatureDataOptional = GbpNetconfTransaction.read(VppIidFactory.getNetconfNodeIid(new NodeId(hostName)),
+                Optional<GpeFeatureData> gpeFeatureDataOptional =
+                    GbpNetconfTransaction.read(VppIidFactory.getNetconfNodeIid(new NodeId(hostName)),
                         LogicalDatastoreType.CONFIGURATION, VppIidFactory.getGpeFeatureDataIid(),
                         GbpNetconfTransaction.RETRY_COUNT);
 
                 LOG.trace("configureHostIfNeeded -> GpeOnHostFeatureData: {}", gpeFeatureDataOptional);
 
                 if (!gpeFeatureDataOptional.isPresent() || !gpeFeatureDataOptional.get().isEnable()) {
-                    enableGpeOnHostIfNeeded(hostName);
+                    if (!enableGpeOnHostIfNeeded(hostName)) {
+                        LOG.trace("configureHostIfNeeded -> Gpe on host: {} cannot be enabled.", hostName);
+                    }
                     LOG.trace("configureHostIfNeeded -> GpeOnHostFeatureData were cleared");
                 }
 
@@ -202,7 +192,8 @@ public class LispStateManager {
             if (LispStateCommandExecutor.executePutCommand(hostName, addLocatorSetCommand)) {
                 addExtraItrRlocLocatorSetIfNeeded(hostName, lispDataInterfaceName);
             } else {
-                LOG.warn("Failed to write locator set: {} -> {} to host: {}", locatorSetName, lispDataInterfaceName, hostName);
+                LOG.warn("Failed to write locator set: {} -> {} to host: {}", locatorSetName, lispDataInterfaceName,
+                    hostName);
             }
         } catch (InterruptedException | ExecutionException e) {
             throw new LispNotFoundException("No interface with Ip Address found!");
@@ -267,7 +258,7 @@ public class LispStateManager {
 
     private void addVniSpecificConfigurationsIfNeeded(String hostName, long vni, long vrf) {
 
-        if (vnisByHostname.get(hostName) != null && !vnisByHostname.get(hostName).contains(Long.valueOf(vni))) {
+        if (vnisByHostname.get(hostName) != null && !vnisByHostname.get(hostName).contains(vni)) {
             if (addVniToVrfMapping(hostName, vni, vrf)) {
                 if (!addGpeNativeForwardPath(hostName, vrf, hostRelatedInfoContainer.getPhysicalInterfaceState(hostName)
                         .getIp(PhysicalInterfaces.PhysicalInterfaceType.PUBLIC))) {
@@ -340,7 +331,9 @@ public class LispStateManager {
                 if (vnisByHostname.get(hostname)!= null && vnisByHostname.get(hostname).size() == 0) {
                     //safe to delete lisp
                     deleteLispStatesFromHost(hostname);
-                    deleteNativeForwardPathsTables(hostname);
+                    if (!deleteNativeForwardPathsTables(hostname)) {
+                        LOG.warn("Failed to delete native forward paths tables from host: {}", hostname);
+                    }
                     vnisByHostname.remove(hostname);
 
                 }
@@ -364,20 +357,9 @@ public class LispStateManager {
 
 
     private void deleteLispStatesFromHost(String hostname) throws LispConfigCommandFailedException {
-        /*AbstractLispCommand<LispFeatureData> deleteLispFeatureData = LispCommandWrapper.deleteLispFeatureData();
-
-        if (LispStateCommandExecutor.executeDeleteCommand(endpointHost.getHostName(), deleteLispFeatureData)) {
-            hostRelatedInfoContainer.deleteLispStateOfHost(endpointHost.getHostName());
-            LOG.debug("Deleted all lisp data {}, for host {}",
-                hostRelatedInfoContainer.getLispStateOfHost(endpointHost.getHostName()), endpointHost.getHostName());
-        } else {
-            throw new LispConfigCommandFailedException("Lisp delete feature data command failed!");
-        }
-        */
-
-        //Todo workaround to delete only inside data not whole lisp-feature-data
+        //Todo workaround to delete only inside data not whole lisp-feature-data at once
         // (causes VPP to crash https://jira.fd.io/browse/HC2VPP-242) remove when fixed
-        InstanceIdentifier<Node> nodeIid = LispUtil.HOSTNAME_TO_IID.apply(hostname);
+        InstanceIdentifier<Node> nodeIid = LispUtil.hostnameToIid(hostname);
         Optional<Lisp> lispOptional =
             GbpNetconfTransaction.read(nodeIid, LogicalDatastoreType.CONFIGURATION,
                 InstanceIdentifier.create(Lisp.class), GbpNetconfTransaction.RETRY_COUNT);
@@ -484,7 +466,7 @@ public class LispStateManager {
         return neutronTenantToVniMapper.getVni(tenantUuid);
     }
 
-    public static void cleanLisp(String hostName)
+    private static void cleanLisp(String hostName)
         throws LispConfigCommandFailedException {
         if (LispStateCommandExecutor.executeDeleteCommand(hostName, LispCommandWrapper.deleteLispFeatureData())) {
             LOG.debug("Deleted all lisp data for host {}",hostName);

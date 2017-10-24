@@ -7,44 +7,29 @@
  */
 package org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.info.container;
 
-import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.info.container.states.PortInterfaces;
-import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.info.container.states.LispState;
-import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.info.container.states.PhysicalInterfaces;
-import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.info.container.states.VrfHolder;
-import org.opendaylight.groupbasedpolicy.renderer.vpp.listener.VppEndpointListener;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.google.common.base.Preconditions;
 import com.google.common.collect.HashBasedTable;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.common.collect.Table;
 
 import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
-/**
- * Created by Shakib Ahmed on 7/13/17.
- */
-public class HostRelatedInfoContainer {
-    private HashMap<String, LispState> hostNameToLispStateMapper;
-    private HashMap<String, PhysicalInterfaces> hostNameToPhysicalInterfacesMapper;
-    private HashMap<String, PortInterfaces> hostNameToPortInterfacesMapper;
-    private HashMap<String, VrfHolder> hostNameToVrfHolderMapper;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.info.container.states.PhysicalInterfaces;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.listener.VppEndpointListener;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-    //route IDs on an interface on a host 
+public class HostRelatedInfoContainer {
+    private HashMap<String, PhysicalInterfaces> hostNameToPhysicalInterfacesMapper;
+
+    //route IDs on an interface on a host
     private Table<String, String, Set<Long>> routeIdsByHostByVrf = HashBasedTable.create();
-    
+
     private static final HostRelatedInfoContainer INSTANCE = new HostRelatedInfoContainer();
 
     private HostRelatedInfoContainer() {
-        this.hostNameToLispStateMapper = new HashMap<>();
         this.hostNameToPhysicalInterfacesMapper = new HashMap<>();
-        this.hostNameToPortInterfacesMapper = new HashMap<>();
-        this.hostNameToVrfHolderMapper = new HashMap<>();
     }
 
     public void addRouteToIntfc(String hostname, String intfName, Long routeId) {
@@ -68,14 +53,15 @@ public class HostRelatedInfoContainer {
     }
 
     private static final Logger LOG = LoggerFactory.getLogger(VppEndpointListener.class);
-    
+
     public boolean intfcIsBusy(String hostname, String intfName) {
         Preconditions.checkNotNull(hostname);
         Preconditions.checkNotNull(intfName);
         if (routeIdsByHostByVrf.get(hostname, intfName) != null) {
             int size = routeIdsByHostByVrf.get(hostname, intfName).size();
-            LOG.trace("ISPORTBUSY -> hostname: {}, inftName: {}, entries: {}", hostname, intfName, routeIdsByHostByVrf.get(hostname, intfName));
-            return (size == 0) ? false : true;
+            LOG.trace("ISPORTBUSY -> hostname: {}, inftName: {}, entries: {}", hostname, intfName,
+                routeIdsByHostByVrf.get(hostname, intfName));
+            return size != 0;
         }
         LOG.trace("ISPORTBUSY -> not busy interface on hostname: {}, inftName: {}", hostname, intfName);
         return false;
@@ -83,18 +69,6 @@ public class HostRelatedInfoContainer {
 
     public static HostRelatedInfoContainer getInstance() {
         return INSTANCE;
-    }
-
-    public LispState getLispStateOfHost(String hostName) {
-        return hostNameToLispStateMapper.get(hostName);
-    }
-
-    public void setLispStateOfHost(String hostName, LispState lispState) {
-        hostNameToLispStateMapper.put(hostName, lispState);
-    }
-
-    public void deleteLispStateOfHost(String hostName) {
-        hostNameToLispStateMapper.remove(hostName);
     }
 
     public PhysicalInterfaces getPhysicalInterfaceState(String hostName) {
@@ -106,35 +80,7 @@ public class HostRelatedInfoContainer {
     }
 
     public void removePhysicalInterfaceStateOfHost(String hostName) {
+        //TODO should be called when host is removed
         hostNameToPhysicalInterfacesMapper.remove(hostName);
-    }
-
-    public PortInterfaces getPortInterfaceStateOfHost(String hostName) {
-        return hostNameToPortInterfacesMapper.computeIfAbsent(hostName, key -> new PortInterfaces());
-    }
-
-    public void setVirtualInterfaceStateOfHost(String hostName, PortInterfaces portInterfaces) {
-        hostNameToPortInterfacesMapper.put(hostName, portInterfaces);
-    }
-
-    public void removeVirtualInterfaceStateOfHost(String hostName) {
-        hostNameToPortInterfacesMapper.remove(hostName);
-    }
-
-    public VrfHolder getVrfStateOfHost(String hostName) {
-        return hostNameToVrfHolderMapper.get(hostName);
-    }
-
-    public VrfHolder initializeVrfStateOfHost(String hostName) {
-        return hostNameToVrfHolderMapper.computeIfAbsent(hostName, key -> new VrfHolder());
-    }
-
-    public int getVrfStateOfHostCount(String hostName) {
-        VrfHolder vrfHolder = hostNameToVrfHolderMapper.get(hostName);
-        return vrfHolder != null ? vrfHolder.vrfStateCount() : 0;
-    }
-
-    public void removeVrfStateOfHost(String hostName) {
-        hostNameToVrfHolderMapper.remove(hostName);
     }
 }

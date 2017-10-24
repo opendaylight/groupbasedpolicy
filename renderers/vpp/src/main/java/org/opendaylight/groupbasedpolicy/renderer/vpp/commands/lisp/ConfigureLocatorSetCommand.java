@@ -16,7 +16,7 @@ import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 
 public class ConfigureLocatorSetCommand extends AbstractLispCommand<LocatorSet> {
 
-    LocatorSetDom locatorSetDom;
+    private LocatorSetDom locatorSetDom;
 
     public ConfigureLocatorSetCommand(LocatorSetDom locatorSetDom) {
         this.locatorSetDom = locatorSetDom;

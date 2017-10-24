@@ -163,10 +163,10 @@ public class VppRendererPolicyManagerTest extends CustomDataBrokerTest {
         Mockito.when(mountedDataProviderMock.resolveDataBrokerForMountPoint(Mockito.any(InstanceIdentifier.class)))
             .thenReturn(Optional.of(mountPointDataBroker));
         vppEndpointListener = new VppEndpointListener(dataBroker, dtoEventBus);
-        lispStateManager = new LispStateManager(mountedDataProviderMock);
-        loopbackManager = new LoopbackManager(mountedDataProviderMock);
+        lispStateManager = new LispStateManager();
+        loopbackManager = new LoopbackManager();
         flatOverlayManager = new FlatOverlayManager(dataBroker, mountedDataProviderMock, vppEndpointListener);
-        ifaceManager = new InterfaceManager(mountedDataProviderMock, dataBroker, flatOverlayManager);
+        ifaceManager = new InterfaceManager(mountedDataProviderMock, dataBroker);
         aclManager = new AclManager(mountedDataProviderMock, ifaceManager);
         natManager = new CentralizedNatImpl(dataBroker);
         routingManager = new RoutingManager(dataBroker, mountedDataProviderMock);

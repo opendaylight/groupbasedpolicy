@@ -15,7 +15,7 @@ import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 
 public class ConfigureMapRegisterStatusCommand extends AbstractLispCommand<MapRegister>{
 
-    MapRegisterDom mapRegisterDom;
+    private MapRegisterDom mapRegisterDom;
 
     public ConfigureMapRegisterStatusCommand(MapRegisterDom mapRegisterDom) {
         this.mapRegisterDom = mapRegisterDom;

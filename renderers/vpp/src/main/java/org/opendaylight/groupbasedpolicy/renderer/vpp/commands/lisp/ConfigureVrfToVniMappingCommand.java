@@ -16,7 +16,7 @@ import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 
 public class ConfigureVrfToVniMappingCommand extends AbstractLispCommand<VniTable> {
 
-    VniTableDom vniTableDom;
+    private VniTableDom vniTableDom;
 
     public ConfigureVrfToVniMappingCommand(VniTableDom vniTableDom) {
         this.vniTableDom = vniTableDom;

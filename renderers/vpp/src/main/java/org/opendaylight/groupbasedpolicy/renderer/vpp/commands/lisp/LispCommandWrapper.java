@@ -8,6 +8,8 @@
 
 package org.opendaylight.groupbasedpolicy.renderer.vpp.commands.lisp;
 
+import java.util.Collections;
+
 import org.opendaylight.groupbasedpolicy.renderer.vpp.commands.lisp.dom.GbpGpeEntryDom;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.commands.lisp.dom.GpeEnableDom;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.commands.lisp.dom.InterfaceDom;
@@ -41,11 +43,6 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev171013.map.resolvers.grouping.map.resolvers.MapResolver;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev171013.map.servers.grouping.map.servers.MapServer;
 
-import java.util.Arrays;
-
-/**
- * Created by Shakib Ahmed on 3/21/17.
- */
 public class LispCommandWrapper {
     public static AbstractLispCommand<Lisp> enableLisp() {
         LispDom lispDom = new LispDom();
@@ -53,17 +50,15 @@ public class LispCommandWrapper {
         return new ConfigureLispStatusCommand(lispDom);
     }
 
-    public static AbstractLispCommand<LocatorSet> addLocatorSet(String locatorName,
-                                                                String interfaceName,
-                                                                short priority,
-                                                                short weight) {
+    public static AbstractLispCommand<LocatorSet> addLocatorSet(String locatorName, String interfaceName,
+        short priority, short weight) {
         InterfaceDom interfaceDom = new InterfaceDom();
         interfaceDom.setInterfaceName(interfaceName);
         interfaceDom.setPriority(priority);
         interfaceDom.setWeight(weight);
 
         LocatorSetDom locatorSetDom = new LocatorSetDom();
-        locatorSetDom.setInterfaces(Arrays.asList(interfaceDom.getSALObject()));
+        locatorSetDom.setInterfaces(Collections.singletonList(interfaceDom.getSALObject()));
         locatorSetDom.setLocatorName(locatorName);
         return new ConfigureLocatorSetCommand(locatorSetDom);
     }
@@ -99,10 +94,8 @@ public class LispCommandWrapper {
         return new ConfigureMapServerCommand(mapServerDom);
     }
 
-    public static AbstractLispCommand<LocalMapping> addLocalMappingInEidTable(String mappingName,
-                                                                              Eid eid,
-                                                                              String locatorName,
-                                                                              HmacKey hmacKey) {
+    public static AbstractLispCommand<LocalMapping> addLocalMappingInEidTable(String mappingName, Eid eid,
+        String locatorName, HmacKey hmacKey) {
         LocalMappingDom localMappingDom = new LocalMappingDom();
         localMappingDom.setMappingId(new MappingId(mappingName));
         localMappingDom.setEid(eid);
@@ -112,8 +105,7 @@ public class LispCommandWrapper {
         return new ConfigureLocalMappingInEidTableCommand(localMappingDom);
     }
 
-    public static AbstractLispCommand<LocalMapping> deleteLocalMappingFromEidTable(String mappingName,
-                                                                                   long vni) {
+    public static AbstractLispCommand<LocalMapping> deleteLocalMappingFromEidTable(String mappingName, long vni) {
         LocalMappingDom localMappingDom = new LocalMappingDom();
         localMappingDom.setMappingId(new MappingId(mappingName));
         localMappingDom.setVni(vni);
@@ -132,10 +124,8 @@ public class LispCommandWrapper {
         return new ConfigureGpeCommand(gpeEnableDom);
     }
 
-    public static AbstractLispCommand<GpeEntry> addGpeSendMapregisterAction(String entryName,
-                                                                            RemoteEid rEid,
-                                                                            long vni,
-                                                                            long vrf) {
+    public static AbstractLispCommand<GpeEntry> addGpeSendMapregisterAction(String entryName, RemoteEid rEid, long vni,
+        long vrf) {
         GbpGpeEntryDom gpeEntryDom = new GbpGpeEntryDom();
         gpeEntryDom.setId(entryName);
         gpeEntryDom.setRemoteEid(rEid);
@@ -160,16 +150,11 @@ public class LispCommandWrapper {
         return new ConfigureItrRemoteLocatorSetCommand(itrRemoteLocatorSetDom);
     }
 
-    public static AbstractLispCommand<NativeForwardPath> addNativeForwardEntry(long vrf,
-                                                                               IpAddress nextHopIp) {
+    public static AbstractLispCommand<NativeForwardPath> addNativeForwardEntry(long vrf, IpAddress nextHopIp) {
         NativeForwardPathDom nativeForwardPathDom = new NativeForwardPathDom();
         nativeForwardPathDom.setVrfId(vrf);
         nativeForwardPathDom.setNextHopIp(nextHopIp);
         return new ConfigureNativeForwardPathCommand(nativeForwardPathDom);
-    }
-
-    public static AbstractLispCommand<GpeFeatureData> deleteGpeFeatureData() {
-        return new DeleteGpeFeatureDataCommand();
     }
 
     public static AbstractLispCommand<NativeForwardPathsTables> deleteNativeForwardPathsTables() {

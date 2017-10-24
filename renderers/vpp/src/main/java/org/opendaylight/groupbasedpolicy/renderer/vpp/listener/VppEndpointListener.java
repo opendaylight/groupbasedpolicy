@@ -8,6 +8,13 @@
 
 package org.opendaylight.groupbasedpolicy.renderer.vpp.listener;
 
+import com.google.common.base.Preconditions;
+import com.google.common.collect.HashBasedTable;
+import com.google.common.collect.Table;
+import com.google.common.eventbus.EventBus;
+
+import javax.annotation.Nonnull;
+
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.DataObjectModification;
 import org.opendaylight.controller.md.sal.binding.api.DataTreeIdentifier;
@@ -15,20 +22,12 @@ import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.config.ConfigUtil;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.event.VppEndpointConfEvent;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.info.container.HostRelatedInfoContainer;
-import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.info.container.states.PortInterfaces;
 import org.opendaylight.groupbasedpolicy.util.DataTreeChangeHandler;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.Config;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.config.VppEndpoint;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.google.common.base.Preconditions;
-import com.google.common.collect.HashBasedTable;
-import com.google.common.collect.Table;
-import com.google.common.eventbus.EventBus;
-
-import javax.annotation.Nonnull;
 
 public class VppEndpointListener extends DataTreeChangeHandler<VppEndpoint> {
 
@@ -57,6 +56,7 @@ public class VppEndpointListener extends DataTreeChangeHandler<VppEndpoint> {
         InstanceIdentifier<VppEndpoint> rootIdentifier) {
         if (ConfigUtil.getInstance().isL3FlatEnabled()) {
             VppEndpoint vppEndpointBefore = rootNode.getDataBefore();
+            Preconditions.checkNotNull(vppEndpointBefore, "VppEndpoint cannot be null on delete operation.");
             LOG.trace("onDelete -> Vppendpoint deleted: {}", vppEndpointBefore);
             Preconditions.checkArgument(vppEndpointBefore.getVppNodeId() != null);
             Preconditions.checkArgument(vppEndpointBefore.getVppInterfaceName() != null);

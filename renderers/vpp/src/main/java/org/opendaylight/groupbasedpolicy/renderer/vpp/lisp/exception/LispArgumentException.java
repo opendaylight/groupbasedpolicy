@@ -8,11 +8,8 @@
 
 package org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.exception;
 
-/**
- * Created by Shakib Ahmed on 3/31/17.
- */
-public class LispHelperArgumentException extends Exception {
-    public LispHelperArgumentException(final String message) {
+public class LispArgumentException extends Exception {
+    public LispArgumentException(final String message) {
         super(message);
     }
 }

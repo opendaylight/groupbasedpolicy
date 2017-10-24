@@ -37,7 +37,6 @@ import org.opendaylight.groupbasedpolicy.renderer.vpp.commands.interfaces.Config
 import org.opendaylight.groupbasedpolicy.renderer.vpp.config.ConfigUtil;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.event.NodeOperEvent;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.event.VppEndpointConfEvent;
-import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.flat.overlay.FlatOverlayManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.policy.acl.AccessListWrapper;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.GbpNetconfTransaction;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.General.Operations;
@@ -77,13 +76,10 @@ public class InterfaceManager implements AutoCloseable {
     private final MountedDataBrokerProvider mountDataProvider;
     private final VppEndpointLocationProvider vppEndpointLocationProvider;
     private final SetMultimap<NodeId, String> excludedFromPolicy = HashMultimap.create();
-    private final FlatOverlayManager flatOverlayManager;
 
-    public InterfaceManager(@Nonnull MountedDataBrokerProvider mountDataProvider, @Nonnull DataBroker dataProvider,
-                            FlatOverlayManager flatOverlayManager) {
+    public InterfaceManager(@Nonnull MountedDataBrokerProvider mountDataProvider, @Nonnull DataBroker dataProvider) {
         this.mountDataProvider = Preconditions.checkNotNull(mountDataProvider);
         this.vppEndpointLocationProvider = new VppEndpointLocationProvider(dataProvider);
-        this.flatOverlayManager = flatOverlayManager;
     }
 
     @Subscribe

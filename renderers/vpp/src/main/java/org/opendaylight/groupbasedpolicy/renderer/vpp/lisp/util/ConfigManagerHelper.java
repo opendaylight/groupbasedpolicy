@@ -14,26 +14,19 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
 
 import javax.annotation.Nonnull;
 
-import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.config.ConfigUtil;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.iface.VppPathMapper;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.LispStateManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.exception.LispNotFoundException;
-import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.info.container.EndpointHost;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.info.container.HostRelatedInfoContainer;
-import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.info.container.states.LispState;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.info.container.states.PhysicalInterfaces;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.GbpNetconfTransaction;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.InterfaceUtil;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.LispUtil;
-import org.opendaylight.groupbasedpolicy.renderer.vpp.util.MountedDataBrokerProvider;
-import org.opendaylight.groupbasedpolicy.renderer.vpp.util.VppIidFactory;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.iana._if.type.rev140508.EthernetCsmacd;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.Ipv4Address;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.Ipv4AddressNoZone;
@@ -51,7 +44,6 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpo
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.common.endpoint.fields.network.containment.containment.NetworkDomainContainment;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.has.absolute.location.absolute.location.LocationType;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.has.absolute.location.absolute.location.location.type.ExternalLocationCase;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.has.child.endpoints.ChildEndpoint;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.has.relative.location.relative.locations.ExternalLocation;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.parent.child.endpoints.ParentEndpointChoice;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.parent.child.endpoints.parent.endpoint.choice.ParentEndpointCase;
@@ -60,15 +52,9 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev170511.L3Context;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev170511.MacAddressType;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.endpoints.AddressEndpointWithLocation;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.config.VppEndpoint;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev171013.HmacKeyType;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev171013.dp.subtable.grouping.local.mappings.local.mapping.Eid;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev171013.hmac.key.grouping.HmacKey;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev170607.interfaces._interface.Routing;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev170607.interfaces._interface.RoutingBuilder;
-import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.NodeId;
-import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.topology.Node;
-import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.topology.NodeKey;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -76,10 +62,8 @@ import org.slf4j.LoggerFactory;
 public class ConfigManagerHelper {
     private static final Logger LOG = LoggerFactory.getLogger(ConfigManagerHelper.class);
 
-    private MountedDataBrokerProvider mountedDataBrokerProvider;
 
-    public ConfigManagerHelper(MountedDataBrokerProvider mountedDataBrokerProvider) {
-        this.mountedDataBrokerProvider = mountedDataBrokerProvider;
+    public ConfigManagerHelper() {
     }
 
 
@@ -109,7 +93,7 @@ public class ConfigManagerHelper {
                 .getName(PhysicalInterfaces.PhysicalInterfaceType.PUBLIC);
 
         final Optional<InterfacesState> opInterfaceState =
-                GbpNetconfTransaction.read(LispUtil.HOSTNAME_TO_IID.apply(hostName), LogicalDatastoreType.OPERATIONAL,
+                GbpNetconfTransaction.read(LispUtil.hostnameToIid(hostName), LogicalDatastoreType.OPERATIONAL,
                         InstanceIdentifier.create(InterfacesState.class), GbpNetconfTransaction.RETRY_COUNT);
 
         if (!opInterfaceState.isPresent()) {
@@ -126,7 +110,7 @@ public class ConfigManagerHelper {
         }
 
         final Optional<Interfaces> opInterfaces =
-                GbpNetconfTransaction.read(LispUtil.HOSTNAME_TO_IID.apply(hostName), LogicalDatastoreType.CONFIGURATION,
+                GbpNetconfTransaction.read(LispUtil.hostnameToIid(hostName), LogicalDatastoreType.CONFIGURATION,
                         InstanceIdentifier.create(Interfaces.class), GbpNetconfTransaction.RETRY_COUNT);
 
 
@@ -226,14 +210,14 @@ public class ConfigManagerHelper {
             return false;
         }
 
-        final org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.ip.rev140616.interfaces._interface.Ipv4 ipv4 =
-                augIntf.getIpv4();
+        final org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.ip.rev140616.interfaces._interface.Ipv4
+            ipv4 = augIntf.getIpv4();
         if (ipv4 == null) {
             return false;
         }
 
-        final List<org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.ip.rev140616.interfaces._interface.ipv4.Address> addresses =
-                ipv4.getAddress();
+        final List<org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.ip.rev140616.interfaces._interface.ipv4.Address>
+            addresses = ipv4.getAddress();
         if (addresses == null || addresses.isEmpty()) {
             return false;
         }
@@ -244,7 +228,7 @@ public class ConfigManagerHelper {
 
     public String getLispCpRlocInterfaceName(@Nonnull String hostName) {
         List<Interface> operationalInterfaceList =
-                InterfaceUtil.getOperationalInterfaces(LispUtil.HOSTNAME_TO_IID.apply(hostName));
+                InterfaceUtil.getOperationalInterfaces(LispUtil.hostnameToIid(hostName));
 
         if (operationalInterfaceList == null) {
             return null;
@@ -333,16 +317,6 @@ public class ConfigManagerHelper {
         }
     }
 
-    public String getFirstLocatorSetName(LispState lispState) {
-        Set<Map.Entry<String, String >> locatorSet = lispState.getLocatorSetEntry();
-        Preconditions.checkNotNull(locatorSet, "No locator set found!");
-        if (!locatorSet.iterator().hasNext()) {
-            return null;
-        }
-
-        return locatorSet.iterator().next().getValue();
-    }
-
     public Optional<String> getInterfaceName(AddressEndpointWithLocation addedEp) {
         ExternalLocationCase epLoc = resolveAndValidateLocation(addedEp);
         String interfacePath = epLoc.getExternalNodeConnector();
@@ -360,37 +334,8 @@ public class ConfigManagerHelper {
         return LispUtil.toHmacKey(HmacKeyType.Sha196Key, LispStateManager.DEFAULT_XTR_KEY);
     }
 
-    public String getPhysicalAddress(AddressEndpointWithLocation addressEp) {
-        String physicalAddress = null;
-
-        if (addressEp.getAddressType().equals(MacAddressType.class)) {
-            physicalAddress = addressEp.getAddress();
-        } else {
-            List<ChildEndpoint> childEndpoints = addressEp.getChildEndpoint();
-            for (ChildEndpoint childEndpoint : childEndpoints) {
-                if (childEndpoint.getAddressType().equals(MacAddressType.class)) {
-                    physicalAddress = childEndpoint.getAddress();
-                    break;
-                }
-            }
-        }
-        return Preconditions.checkNotNull(physicalAddress, "Physical address not found " +
-                "in address endpoint: " + addressEp);
-    }
-
-    public boolean hasRelativeLocations(AddressEndpointWithLocation addedEp) {
-        return addedEp.getRelativeLocations() != null && addedEp.getRelativeLocations().getExternalLocation() != null;
-    }
 
     public static boolean isMetadataPort(AddressEndpointWithLocation addressEp) {
         return IpAddressUtil.isMetadataIp(getInterfaceIp(addressEp));
-    }
-
-    public String getGatewayInterfaceName(String gwNamePrefix, String subnetUuid) {
-        return gwNamePrefix + subnetUuid;
-    }
-
-    public Routing getRouting(long vrf) {
-        return new RoutingBuilder().setIpv4VrfId(vrf).build();
     }
 }

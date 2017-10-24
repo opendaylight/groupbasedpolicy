@@ -13,7 +13,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 
 public class ConfigureItrRemoteLocatorSetCommand extends AbstractLispCommand<ItrRemoteLocatorSet> {
-    ItrRemoteLocatorSetDom itrRemoteLocatorSetDom;
+    private ItrRemoteLocatorSetDom itrRemoteLocatorSetDom;
 
     public ConfigureItrRemoteLocatorSetCommand(ItrRemoteLocatorSetDom itrRemoteLocatorSetDom) {
         this.itrRemoteLocatorSetDom = itrRemoteLocatorSetDom;

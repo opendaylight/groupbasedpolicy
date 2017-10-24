@@ -7,20 +7,11 @@
  */
 package org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.flat.overlay;
 
-import com.google.common.base.Preconditions;
-
 import java.util.Collections;
 import java.util.List;
 
-import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.LispStateManager;
-import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.exception.LispConfigCommandFailedException;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.info.container.HostRelatedInfoContainer;
-import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.info.container.states.PortInterfaces;
-import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.info.container.states.PortRouteState;
-import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.info.container.states.VrfHolder;
-import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.info.container.states.VrfState;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.util.Constants;
-import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.util.IpAddressUtil;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.GbpNetconfTransaction;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.VppIidFactory;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.Ipv4Address;
@@ -49,7 +40,7 @@ import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class StaticRoutingHelper {
+class StaticRoutingHelper {
     private static final Logger LOG = LoggerFactory.getLogger(StaticRoutingHelper.class);
 
     private HostRelatedInfoContainer hostRelatedInfoContainer = HostRelatedInfoContainer.getInstance();
@@ -70,11 +61,8 @@ public class StaticRoutingHelper {
 
         InstanceIdentifier<RoutingProtocol> iid = VppIidFactory
                 .getRoutingInstanceIid(builder.getKey());
-        if (GbpNetconfTransaction.netconfSyncedWrite(nodeIid, iid, builder.build(),
-                GbpNetconfTransaction.RETRY_COUNT)) {
-            return true;
-        }
-        return false;
+        return GbpNetconfTransaction.netconfSyncedWrite(nodeIid, iid, builder.build(),
+            GbpNetconfTransaction.RETRY_COUNT);
     }
 
     synchronized boolean addSingleStaticRouteInRoutingProtocol(Long routeId, String hostName, long portVrfId,
@@ -116,8 +104,9 @@ public class StaticRoutingHelper {
         return false;
     }
 
-    public synchronized static boolean deleteSingleStaticRouteFromRoutingProtocol(String hostName, long vrfId, Long routeId) {
-        LOG.trace("deleteSingleStaticRouteFromRoutingProtocol -> deleting route. id: {}, vrf: {}, hostName: {}", routeId, vrfId, hostName);
+    synchronized boolean deleteSingleStaticRouteFromRoutingProtocol(String hostName, long vrfId, Long routeId) {
+        LOG.trace("deleteSingleStaticRouteFromRoutingProtocol -> deleting route. id: {}, vrf: {}, hostName: {}",
+            routeId, vrfId, hostName);
 
         String protocolName = Constants.ROUTING_PROTOCOL_NAME_PREFIX + vrfId;
         InstanceIdentifier<Route> iid = VppIidFactory
@@ -131,7 +120,7 @@ public class StaticRoutingHelper {
             GbpNetconfTransaction.RETRY_COUNT);
     }
 
-    public static RoutingProtocolKey getRoutingProtocolName(long vrf) {
+    static RoutingProtocolKey getRoutingProtocolName(long vrf) {
         return new RoutingProtocolKey(Constants.ROUTING_PROTOCOL_NAME_PREFIX + vrf);
     }
 }

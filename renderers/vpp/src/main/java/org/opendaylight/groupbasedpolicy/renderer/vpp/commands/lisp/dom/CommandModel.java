@@ -10,9 +10,6 @@ package org.opendaylight.groupbasedpolicy.renderer.vpp.commands.lisp.dom;
 
 import org.opendaylight.yangtools.yang.binding.DataObject;
 
-/**
- * Created by Shakib Ahmed on 3/20/17.
- */
 public interface CommandModel {
     <T extends DataObject> T getSALObject();
 }
