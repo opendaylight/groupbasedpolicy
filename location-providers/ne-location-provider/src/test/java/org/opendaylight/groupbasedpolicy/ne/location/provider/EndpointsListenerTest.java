@@ -33,30 +33,30 @@ public class EndpointsListenerTest {
     private ListenerRegistration<EndpointsListener> listenerRegistration;
 
     @Before
-    public void init () {
+    public void init() {
         dataBroker = mock(DataBroker.class);
         listenerRegistration = mock(ListenerRegistration.class);
         when(dataBroker.registerDataTreeChangeListener(any(), Matchers.any(EndpointsListener.class)))
-        .thenReturn(listenerRegistration);
+            .thenReturn(listenerRegistration);
         listener = mock(NeLocationProvider.class);
         endpointsListener = new EndpointsListener(dataBroker, listener);
     }
 
     @Test
-    public void test_RegistrationDone () {
+    public void test_RegistrationDone() {
         verify(dataBroker).registerDataTreeChangeListener(new DataTreeIdentifier<>(LogicalDatastoreType.OPERATIONAL,
                 InstanceIdentifier.builder(Endpoints.class).child(AddressEndpoints.class)
                 .child(AddressEndpoint.class).build()), endpointsListener);
     }
 
     @Test
-    public void test_ListenerNotification () {
+    public void test_ListenerNotification() {
         endpointsListener.onDataTreeChanged(null);
         verify(listener).onEndpointsChange(any());
     }
 
     @Test
-    public void test_UnregiserOnClose () {
+    public void test_UnregiserOnClose() {
         endpointsListener.close();
         verify(listenerRegistration).close();
     }

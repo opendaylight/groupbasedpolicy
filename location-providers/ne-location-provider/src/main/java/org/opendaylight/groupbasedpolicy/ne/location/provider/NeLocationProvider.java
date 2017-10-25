@@ -8,6 +8,8 @@
 
 package org.opendaylight.groupbasedpolicy.ne.location.provider;
 
+import com.google.common.annotations.VisibleForTesting;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -42,8 +44,6 @@ import org.opendaylight.yangtools.yang.binding.DataObject;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.google.common.annotations.VisibleForTesting;
 
 public class NeLocationProvider implements ClusteredDataTreeChangeListener<NetworkElements>, AutoCloseable {
 
@@ -100,6 +100,9 @@ public class NeLocationProvider implements ClusteredDataTreeChangeListener<Netwo
                     this.endpoints.add(change.getRootNode().getDataAfter());
                     break;
                 }
+                default:
+                    //noop
+                    break;
             }
         }
         DataStoreHelper.submitToDs(wtx);
@@ -117,7 +120,8 @@ public class NeLocationProvider implements ClusteredDataTreeChangeListener<Netwo
                             .providerAddressEndpointLocationIid(NE_LOCATION_PROVIDER_NAME, IpPrefixType.class,
                                     endpoint.getAddress(), endpoint.getContextType(), endpoint.getContextId())
                             .child(AbsoluteLocation.class);
-                        wtx.put(LogicalDatastoreType.CONFIGURATION, iid, createRealLocation(ne.getIid(), iface.getIid()),
+                        wtx.put(LogicalDatastoreType.CONFIGURATION, iid,
+                            createRealLocation(ne.getIid(), iface.getIid()),
                                 true);
                         LOG.debug("New location created for endpoint {}", endpoint);
                         return;
@@ -197,6 +201,9 @@ public class NeLocationProvider implements ClusteredDataTreeChangeListener<Netwo
                     }
                     break;
                 }
+                default:
+                    //noop
+                    break;
             }
         }
         DataStoreHelper.submitToDs(wtx);
@@ -204,15 +211,12 @@ public class NeLocationProvider implements ClusteredDataTreeChangeListener<Netwo
 
     private List<DataObjectModification<NetworkElement>> getModifiedNetworkElements(
             DataObjectModification<NetworkElements> modifiedNEs) {
-        Collection<DataObjectModification<? extends DataObject>> potentialModifiedNetworkElements =
+        Collection<DataObjectModification<? extends DataObject>> modifiedNetworkElements =
                 modifiedNEs.getModifiedChildren();
-        if (potentialModifiedNetworkElements == null) {
-            return Collections.emptyList();
-        }
         List<DataObjectModification<NetworkElement>> nes = new ArrayList<>();
-        for (DataObjectModification<? extends DataObject> potentialModifiedNetworkElement : potentialModifiedNetworkElements) {
-            if (potentialModifiedNetworkElement.getDataType().isAssignableFrom(NetworkElement.class)) {
-                nes.add((DataObjectModification<NetworkElement>) potentialModifiedNetworkElement);
+        for (DataObjectModification<? extends DataObject> modifiedNetworkElement : modifiedNetworkElements) {
+            if (modifiedNetworkElement.getDataType().isAssignableFrom(NetworkElement.class)) {
+                nes.add((DataObjectModification<NetworkElement>) modifiedNetworkElement);
             }
         }
         return nes;
@@ -258,6 +262,9 @@ public class NeLocationProvider implements ClusteredDataTreeChangeListener<Netwo
                 }
                 break;
             }
+            default:
+                //noop
+                break;
         }
     }
 
@@ -315,6 +322,9 @@ public class NeLocationProvider implements ClusteredDataTreeChangeListener<Netwo
                 }
                 break;
             }
+            default:
+                //noop
+                break;
         }
     }
 
@@ -367,6 +377,9 @@ public class NeLocationProvider implements ClusteredDataTreeChangeListener<Netwo
                 LOG.debug("EndpointNetwork {} changed", modifiedEN.getDataAfter().getKey());
                 break;
             }
+            default:
+                //noop
+                break;
         }
     }
 

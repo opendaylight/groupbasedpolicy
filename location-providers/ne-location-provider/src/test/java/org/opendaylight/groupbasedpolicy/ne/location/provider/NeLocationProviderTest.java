@@ -19,6 +19,10 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.google.common.base.Optional;
+import com.google.common.collect.ImmutableList;
+import com.google.common.util.concurrent.CheckedFuture;
+
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -79,26 +83,21 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.nodes.N
 import org.opendaylight.yangtools.concepts.ListenerRegistration;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 
-import com.google.common.base.Optional;
-import com.google.common.collect.ImmutableList;
-import com.google.common.util.concurrent.CheckedFuture;
-
 public class NeLocationProviderTest extends CustomDataBrokerTest {
 
     private static final TenantId TENANT = new TenantId("Tenant");
     private static final List<EndpointGroupId> DEFAULT_EPG =
         Collections.singletonList(new EndpointGroupId("defaultEPG"));
+    private static final String L3_CONTEXT_ID = "l3Context";
+    private static final String IP_V4_HOST_ADDRESS_1 = "192.168.50.71/24";
+    private static final String IP_V4_NETWORK_ADDRESS_1 = "192.168.50.0/24";
+    private static final String IP_V4_NETWORK_ADDRESS_2 = "192.168.51.0/24";
+    private static final String NODE_ID_1 = "node1";
+    private static final String NODE_ID_2 = "node2";
+    private static final String CONNECTOR_ID_1 = "connector:1";
+    private static final String CONNECTOR_ID_2 = "connector:2";
     private DataBroker dataBroker;
     private NeLocationProvider neProvider;
-    private String L3_CONTEXT_ID = "l3Context";
-    private String IPv4_HOST_ADDRESS_1 = "192.168.50.71/24";
-    private String IPv4_HOST_ADDRESS_2 = "192.168.50.72/24";
-    private String IPv4_NETWORK_ADDRESS_1 = "192.168.50.0/24";
-    private String IPv4_NETWORK_ADDRESS_2 = "192.168.51.0/24";
-    private String NODE_ID_1 = "node1";
-    private String NODE_ID_2 = "node2";
-    private String CONNECTOR_ID_1 = "connector:1";
-    private String CONNECTOR_ID_2 = "connector:2";
 
     @Override
     public Collection<Class<?>> getClassesFromModules() {
@@ -136,13 +135,13 @@ public class NeLocationProviderTest extends CustomDataBrokerTest {
         ListenerRegistration<EndpointsListener> endpointsListenerRegistration = mock(ListenerRegistration.class);
         when(dataBroker.registerDataTreeChangeListener(any(), isA(EndpointsListener.class)))
             .thenReturn(endpointsListenerRegistration);
-        ListenerRegistration<NeLocationProvider> NEListenerRegistration = mock(ListenerRegistration.class);
+        ListenerRegistration<NeLocationProvider> nelistenerregistration = mock(ListenerRegistration.class);
         when(dataBroker.registerDataTreeChangeListener(any(), isA(NeLocationProvider.class)))
-            .thenReturn(NEListenerRegistration);
+            .thenReturn(nelistenerregistration);
         NeLocationProvider provider = new NeLocationProvider(dataBroker);
         provider.close();
         verify(endpointsListenerRegistration).close();
-        verify(NEListenerRegistration).close();
+        verify(nelistenerregistration).close();
     }
 
     @Test
@@ -161,7 +160,7 @@ public class NeLocationProviderTest extends CustomDataBrokerTest {
             new NetworkDomainContainmentBuilder().setNetworkDomainId(new NetworkDomainId(L3_CONTEXT_ID)).build())
             .build();
         AddressEndpoint endpoint = new AddressEndpointBuilder().setKey(
-                new AddressEndpointKey(IPv4_HOST_ADDRESS_1, IpPrefixType.class, new ContextId(L3_CONTEXT_ID),
+                new AddressEndpointKey(IP_V4_HOST_ADDRESS_1, IpPrefixType.class, new ContextId(L3_CONTEXT_ID),
                     L3Context.class)).setNetworkContainment(nc).setTenant(TENANT).setEndpointGroup(DEFAULT_EPG).build();
         InstanceIdentifier<AddressEndpoint> iid = IidFactory.addressEndpointIid(endpoint.getKey());
         WriteTransaction wtx = dataBroker.newWriteOnlyTransaction();
@@ -183,7 +182,7 @@ public class NeLocationProviderTest extends CustomDataBrokerTest {
         InstanceIdentifier<NetworkContainment> iid = InstanceIdentifier
                 .builder(Endpoints.class)
                 .child(AddressEndpoints.class)
-                .child(AddressEndpoint.class, new AddressEndpointKey(IPv4_HOST_ADDRESS_1, IpPrefixType.class,
+                .child(AddressEndpoint.class, new AddressEndpointKey(IP_V4_HOST_ADDRESS_1, IpPrefixType.class,
                         new ContextId(L3_CONTEXT_ID), L3Context.class))
                 .child(NetworkContainment.class)
                 .build();
@@ -234,7 +233,7 @@ public class NeLocationProviderTest extends CustomDataBrokerTest {
     @Test
     public void test_NetworkElementsWrite_NoEP_Overwrite() throws Exception {
         writeBaseNetworkElements();
-        NetworkElements nes = createNetworkElements(NODE_ID_2, CONNECTOR_ID_2, L3_CONTEXT_ID, IPv4_NETWORK_ADDRESS_1);
+        NetworkElements nes = createNetworkElements(NODE_ID_2, CONNECTOR_ID_2, L3_CONTEXT_ID, IP_V4_NETWORK_ADDRESS_1);
         InstanceIdentifier<NetworkElements> iid = InstanceIdentifier.builder(NetworkElements.class).build();
         WriteTransaction wtx = dataBroker.newWriteOnlyTransaction();
         wtx.put(LogicalDatastoreType.CONFIGURATION, iid, nes);
@@ -247,7 +246,7 @@ public class NeLocationProviderTest extends CustomDataBrokerTest {
     @Test
     public void test_NetworkElementWrite_NoEP_Overwrite() throws Exception {
         writeBaseNetworkElements();
-        NetworkElement ne = createNetworkElement(NODE_ID_1, CONNECTOR_ID_1, L3_CONTEXT_ID, IPv4_NETWORK_ADDRESS_2);
+        NetworkElement ne = createNetworkElement(NODE_ID_1, CONNECTOR_ID_1, L3_CONTEXT_ID, IP_V4_NETWORK_ADDRESS_2);
         InstanceIdentifier<NetworkElement> iid = InstanceIdentifier.builder(NetworkElements.class)
             .child(NetworkElement.class, new NetworkElementKey(ne.getKey()))
             .build();
@@ -264,7 +263,7 @@ public class NeLocationProviderTest extends CustomDataBrokerTest {
     @Test
     public void test_InterfaceWrite_NoEP_Overwrite() throws Exception {
         writeBaseNetworkElements();
-        Interface iface = createInterface(NODE_ID_1, CONNECTOR_ID_1, L3_CONTEXT_ID, IPv4_NETWORK_ADDRESS_2);
+        Interface iface = createInterface(NODE_ID_1, CONNECTOR_ID_1, L3_CONTEXT_ID, IP_V4_NETWORK_ADDRESS_2);
         InstanceIdentifier<Interface> iid = InstanceIdentifier.builder(NetworkElements.class)
             .child(NetworkElement.class, new NetworkElementKey(createNetworkElementIid(NODE_ID_1)))
             .child(Interface.class, new InterfaceKey(iface.getKey()))
@@ -284,7 +283,7 @@ public class NeLocationProviderTest extends CustomDataBrokerTest {
     @Test
     public void test_EndpointNetworkChange_NoEP() throws Exception {
         writeBaseNetworkElements();
-        EndpointNetwork en = createEndpointNetwork(L3_CONTEXT_ID, IPv4_NETWORK_ADDRESS_2);
+        EndpointNetwork en = createEndpointNetwork(L3_CONTEXT_ID, IP_V4_NETWORK_ADDRESS_2);
         InstanceIdentifier<EndpointNetwork> iid = InstanceIdentifier.builder(NetworkElements.class)
             .child(NetworkElement.class, new NetworkElementKey(createNetworkElementIid(NODE_ID_1)))
             .child(Interface.class, new InterfaceKey(CONNECTOR_ID_1))
@@ -295,7 +294,7 @@ public class NeLocationProviderTest extends CustomDataBrokerTest {
                     .child(NetworkElement.class, new NetworkElementKey(createNetworkElementIid(NODE_ID_1)))
                     .child(Interface.class, new InterfaceKey(CONNECTOR_ID_1))
                     .child(EndpointNetwork.class, new EndpointNetworkKey(
-                            new IpPrefix(new Ipv4Prefix(IPv4_NETWORK_ADDRESS_1)),new ContextId(L3_CONTEXT_ID)))
+                            new IpPrefix(new Ipv4Prefix(IP_V4_NETWORK_ADDRESS_1)),new ContextId(L3_CONTEXT_ID)))
                     .build();
         WriteTransaction wtx = dataBroker.newWriteOnlyTransaction();
         wtx.delete(LogicalDatastoreType.CONFIGURATION, removeIid);
@@ -360,13 +359,13 @@ public class NeLocationProviderTest extends CustomDataBrokerTest {
     @Test
     public void test_CreateLocationForAddrEndpoint_EndpointWriteFirst() throws Exception {
         AddressEndpoint endpoint =
-                createAddressEndpoint(IPv4_HOST_ADDRESS_1, IpPrefixType.class, L3_CONTEXT_ID, L3Context.class);
+                createAddressEndpoint(IP_V4_HOST_ADDRESS_1, IpPrefixType.class, L3_CONTEXT_ID, L3Context.class);
         InstanceIdentifier<AddressEndpoint> iid = IidFactory.addressEndpointIid(endpoint.getKey());
         WriteTransaction wtx = dataBroker.newWriteOnlyTransaction();
         wtx.put(LogicalDatastoreType.OPERATIONAL, iid, endpoint, true);
         wtx.submit().get();
 
-        NetworkElements nes = createNetworkElements(NODE_ID_1, CONNECTOR_ID_1, L3_CONTEXT_ID, IPv4_NETWORK_ADDRESS_1);
+        NetworkElements nes = createNetworkElements(NODE_ID_1, CONNECTOR_ID_1, L3_CONTEXT_ID, IP_V4_NETWORK_ADDRESS_1);
         InstanceIdentifier<NetworkElements> neIid = InstanceIdentifier.builder(NetworkElements.class).build();
         wtx = dataBroker.newWriteOnlyTransaction();
         wtx.put(LogicalDatastoreType.CONFIGURATION, neIid, nes);
@@ -385,7 +384,7 @@ public class NeLocationProviderTest extends CustomDataBrokerTest {
                             .setProvider(new ProviderName(NeLocationProvider.NE_LOCATION_PROVIDER_NAME))
                             .setProviderAddressEndpointLocation(Collections.singletonList(
                                     new ProviderAddressEndpointLocationBuilder()
-                                    .setAddress(IPv4_HOST_ADDRESS_1)
+                                    .setAddress(IP_V4_HOST_ADDRESS_1)
                                     .setAddressType(IpPrefixType.class)
                                     .setContextId(new ContextId(L3_CONTEXT_ID))
                                     .setContextType(L3Context.class)
@@ -403,13 +402,13 @@ public class NeLocationProviderTest extends CustomDataBrokerTest {
 
     @Test
     public void test_CreateLocationForAddrEndpoint_NEWriteFirst() throws Exception {
-        NetworkElements nes = createNetworkElements(NODE_ID_1, CONNECTOR_ID_1, L3_CONTEXT_ID, IPv4_NETWORK_ADDRESS_1);
+        NetworkElements nes = createNetworkElements(NODE_ID_1, CONNECTOR_ID_1, L3_CONTEXT_ID, IP_V4_NETWORK_ADDRESS_1);
         InstanceIdentifier<NetworkElements> neIid = InstanceIdentifier.builder(NetworkElements.class).build();
         WriteTransaction wtx = dataBroker.newWriteOnlyTransaction();
         wtx.put(LogicalDatastoreType.CONFIGURATION, neIid, nes);
 
         AddressEndpoint endpoint =
-                createAddressEndpoint(IPv4_HOST_ADDRESS_1, IpPrefixType.class, L3_CONTEXT_ID, L3Context.class);
+                createAddressEndpoint(IP_V4_HOST_ADDRESS_1, IpPrefixType.class, L3_CONTEXT_ID, L3Context.class);
         InstanceIdentifier<AddressEndpoint> iid = IidFactory.addressEndpointIid(endpoint.getKey());
         wtx.put(LogicalDatastoreType.OPERATIONAL, iid, endpoint, true);
         wtx.submit().get();
@@ -427,7 +426,7 @@ public class NeLocationProviderTest extends CustomDataBrokerTest {
                             .setProvider(new ProviderName(NeLocationProvider.NE_LOCATION_PROVIDER_NAME))
                             .setProviderAddressEndpointLocation(Collections.singletonList(
                                     new ProviderAddressEndpointLocationBuilder()
-                                    .setAddress(IPv4_HOST_ADDRESS_1)
+                                    .setAddress(IP_V4_HOST_ADDRESS_1)
                                     .setAddressType(IpPrefixType.class)
                                     .setContextId(new ContextId(L3_CONTEXT_ID))
                                     .setContextType(L3Context.class)
@@ -445,14 +444,14 @@ public class NeLocationProviderTest extends CustomDataBrokerTest {
 
     @Test
     public void test_CreateLocationForAddrEndpoint_SimultaneousWrite() throws Exception {
-        NetworkElements nes = createNetworkElements(NODE_ID_1, CONNECTOR_ID_1, L3_CONTEXT_ID, IPv4_NETWORK_ADDRESS_1);
+        NetworkElements nes = createNetworkElements(NODE_ID_1, CONNECTOR_ID_1, L3_CONTEXT_ID, IP_V4_NETWORK_ADDRESS_1);
         InstanceIdentifier<NetworkElements> neIid = InstanceIdentifier.builder(NetworkElements.class).build();
         WriteTransaction wtx = dataBroker.newWriteOnlyTransaction();
         wtx.put(LogicalDatastoreType.CONFIGURATION, neIid, nes);
         wtx.submit().get();
 
         AddressEndpoint endpoint =
-                createAddressEndpoint(IPv4_HOST_ADDRESS_1, IpPrefixType.class, L3_CONTEXT_ID, L3Context.class);
+                createAddressEndpoint(IP_V4_HOST_ADDRESS_1, IpPrefixType.class, L3_CONTEXT_ID, L3Context.class);
         InstanceIdentifier<AddressEndpoint> iid = IidFactory.addressEndpointIid(endpoint.getKey());
         wtx = dataBroker.newWriteOnlyTransaction();
         wtx.put(LogicalDatastoreType.OPERATIONAL, iid, endpoint, true);
@@ -471,7 +470,7 @@ public class NeLocationProviderTest extends CustomDataBrokerTest {
                             .setProvider(new ProviderName(NeLocationProvider.NE_LOCATION_PROVIDER_NAME))
                             .setProviderAddressEndpointLocation(Collections.singletonList(
                                     new ProviderAddressEndpointLocationBuilder()
-                                    .setAddress(IPv4_HOST_ADDRESS_1)
+                                    .setAddress(IP_V4_HOST_ADDRESS_1)
                                     .setAddressType(IpPrefixType.class)
                                     .setContextId(new ContextId(L3_CONTEXT_ID))
                                     .setContextType(L3Context.class)
@@ -487,9 +486,9 @@ public class NeLocationProviderTest extends CustomDataBrokerTest {
         assertEquals(locationReference, locations);
     }
 
-    private AddressEndpoint writeBaseAddrEndpoint () throws Exception {
+    private AddressEndpoint writeBaseAddrEndpoint() throws Exception {
         AddressEndpoint endpoint =
-                createAddressEndpoint(IPv4_HOST_ADDRESS_1, IpPrefixType.class, L3_CONTEXT_ID, L3Context.class);
+                createAddressEndpoint(IP_V4_HOST_ADDRESS_1, IpPrefixType.class, L3_CONTEXT_ID, L3Context.class);
         InstanceIdentifier<AddressEndpoint> iid = IidFactory.addressEndpointIid(endpoint.getKey());
         WriteTransaction wtx = dataBroker.newWriteOnlyTransaction();
         wtx.put(LogicalDatastoreType.OPERATIONAL, iid, endpoint, true);
@@ -497,8 +496,8 @@ public class NeLocationProviderTest extends CustomDataBrokerTest {
         return endpoint;
     }
 
-    private NetworkElements writeBaseNetworkElements () throws Exception {
-        NetworkElements nes = createNetworkElements(NODE_ID_1, CONNECTOR_ID_1, L3_CONTEXT_ID, IPv4_NETWORK_ADDRESS_1);
+    private NetworkElements writeBaseNetworkElements() throws Exception {
+        NetworkElements nes = createNetworkElements(NODE_ID_1, CONNECTOR_ID_1, L3_CONTEXT_ID, IP_V4_NETWORK_ADDRESS_1);
         InstanceIdentifier<NetworkElements> iid = InstanceIdentifier.builder(NetworkElements.class).build();
         WriteTransaction wtx = dataBroker.newWriteOnlyTransaction();
         wtx.put(LogicalDatastoreType.CONFIGURATION, iid, nes);
@@ -507,12 +506,12 @@ public class NeLocationProviderTest extends CustomDataBrokerTest {
     }
 
     private AddressEndpoint createAddressEndpoint(String ipAddr, Class<? extends AddressType> addrType,
-            String context, Class<? extends ContextType> cType) {
+            String context, Class<? extends ContextType> contextType) {
         return new AddressEndpointBuilder()
             .setAddress(ipAddr)
             .setAddressType(addrType)
             .setContextId(new ContextId(context))
-            .setContextType(cType).setTenant(TENANT)
+            .setContextType(contextType).setTenant(TENANT)
             .setEndpointGroup(DEFAULT_EPG).build();
     }
 

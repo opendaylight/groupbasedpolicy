@@ -23,17 +23,17 @@ import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class EndpointsListener implements ClusteredDataTreeChangeListener<AddressEndpoint>{
+public class EndpointsListener implements ClusteredDataTreeChangeListener<AddressEndpoint> {
 
     private static final Logger LOG = LoggerFactory.getLogger(EndpointsListener.class);
 
     private NeLocationProvider listener;
     private ListenerRegistration<EndpointsListener> listenerRegistration;
 
-    public EndpointsListener (DataBroker dataBroker, NeLocationProvider listener) {
+    public EndpointsListener(DataBroker dataBroker, NeLocationProvider listener) {
         this.listener = listener;
-        this.listenerRegistration = dataBroker.registerDataTreeChangeListener(new DataTreeIdentifier<>(LogicalDatastoreType.OPERATIONAL,
-                InstanceIdentifier.builder(Endpoints.class)
+        this.listenerRegistration = dataBroker.registerDataTreeChangeListener(new DataTreeIdentifier<>(
+            LogicalDatastoreType.OPERATIONAL, InstanceIdentifier.builder(Endpoints.class)
                 .child(AddressEndpoints.class).child(AddressEndpoint.class).build()), this);
         LOG.info("NE location provider registered for Endpoints listening");
     }
