@@ -32,7 +32,6 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.neutron.gb
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.neutron.gbp.mapper.rev150513.mappings.gbp.by.neutron.mappings.BaseEndpointsByPorts;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.neutron.gbp.mapper.rev150513.mappings.gbp.by.neutron.mappings.EndpointsByPorts;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.neutron.gbp.mapper.rev150513.mappings.gbp.by.neutron.mappings.base.endpoints.by.ports.BaseEndpointByPort;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.neutron.gbp.mapper.rev150513.mappings.gbp.by.neutron.mappings.base.endpoints.by.ports.BaseEndpointByPortKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.neutron.gbp.mapper.rev150513.mappings.gbp.by.neutron.mappings.endpoints.by.ports.EndpointByPort;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.neutron.gbp.mapper.rev150513.mappings.neutron.by.gbp.mappings.ExternalGatewaysAsEndpoints;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.neutron.gbp.mapper.rev150513.mappings.neutron.by.gbp.mappings.ExternalGatewaysAsL3Endpoints;
@@ -53,8 +52,8 @@ public class NeutronGbpIidFactoryTest {
         UniqueId portId = mock(UniqueId.class);
         InstanceIdentifier<EndpointByPort> id = NeutronGbpIidFactory.endpointByPortIid(portId);
         assertNotNull(id);
-        Class<?>[] expectedTypes = {Mappings.class, GbpByNeutronMappings.class, EndpointsByPorts.class,
-                EndpointByPort.class};
+        Class<?>[] expectedTypes =
+            {Mappings.class, GbpByNeutronMappings.class, EndpointsByPorts.class, EndpointByPort.class};
         assertPathArgumentTypes(id.getPathArguments(), expectedTypes);
         assertEquals(EndpointByPort.class, id.getTargetType());
         assertFalse(id.isWildcarded());
@@ -67,8 +66,8 @@ public class NeutronGbpIidFactoryTest {
         MacAddress mac = mock(MacAddress.class);
         InstanceIdentifier<PortByEndpoint> id = NeutronGbpIidFactory.portByEndpointIid(l2BdId, mac);
         assertNotNull(id);
-        Class<?>[] expectedTypes = {Mappings.class, NeutronByGbpMappings.class, PortsByEndpoints.class,
-                PortByEndpoint.class};
+        Class<?>[] expectedTypes =
+            {Mappings.class, NeutronByGbpMappings.class, PortsByEndpoints.class, PortByEndpoint.class};
         assertPathArgumentTypes(id.getPathArguments(), expectedTypes);
         assertEquals(PortByEndpoint.class, id.getTargetType());
         assertFalse(id.isWildcarded());
@@ -80,11 +79,12 @@ public class NeutronGbpIidFactoryTest {
     public void portByBaseEndpointIidTest() {
         String address = "00:00:00:00:00:00:01";
         ContextId ctxId = new ContextId("00000000-1111-2222-3333-44444555566667777");
-        PortByBaseEndpointKey key = new PortByBaseEndpointKey(address, MacAddressType.class, ctxId, MappingUtils.L2_BRDIGE_DOMAIN);
+        PortByBaseEndpointKey key =
+            new PortByBaseEndpointKey(address, MacAddressType.class, ctxId, MappingUtils.L2_BRDIGE_DOMAIN);
         InstanceIdentifier<PortByBaseEndpoint> id = NeutronGbpIidFactory.portByBaseEndpointIid(key);
         assertNotNull(id);
-        Class<?>[] expectedTypes = {Mappings.class, NeutronByGbpMappings.class, PortsByBaseEndpoints.class,
-                PortByBaseEndpoint.class};
+        Class<?>[] expectedTypes =
+            {Mappings.class, NeutronByGbpMappings.class, PortsByBaseEndpoints.class, PortByBaseEndpoint.class};
         assertPathArgumentTypes(id.getPathArguments(), expectedTypes);
         assertEquals(PortByBaseEndpoint.class, id.getTargetType());
         assertFalse(id.isWildcarded());
@@ -102,8 +102,8 @@ public class NeutronGbpIidFactoryTest {
 
         InstanceIdentifier<BaseEndpointByPort> id = NeutronGbpIidFactory.baseEndpointByPortIid(portId);
         assertNotNull(id);
-        Class<?>[] expectedTypes = {Mappings.class, GbpByNeutronMappings.class, BaseEndpointsByPorts.class,
-                BaseEndpointByPort.class};
+        Class<?>[] expectedTypes =
+            {Mappings.class, GbpByNeutronMappings.class, BaseEndpointsByPorts.class, BaseEndpointByPort.class};
         assertPathArgumentTypes(id.getPathArguments(), expectedTypes);
         assertEquals(BaseEndpointByPort.class, id.getTargetType());
         assertFalse(id.isWildcarded());
@@ -117,7 +117,8 @@ public class NeutronGbpIidFactoryTest {
         InstanceIdentifier<ExternalGatewayAsL3Endpoint> id = NeutronGbpIidFactory.externalGatewayAsL3Endpoint(
                 l3Context, ipAddress);
         assertNotNull(id);
-        Class<?>[] expectedTypes = {Mappings.class, NeutronByGbpMappings.class, ExternalGatewaysAsL3Endpoints.class,
+        Class<?>[] expectedTypes =
+            {Mappings.class, NeutronByGbpMappings.class, ExternalGatewaysAsL3Endpoints.class,
                 ExternalGatewayAsL3Endpoint.class};
         assertPathArgumentTypes(id.getPathArguments(), expectedTypes);
         assertEquals(ExternalGatewayAsL3Endpoint.class, id.getTargetType());
@@ -133,22 +134,19 @@ public class NeutronGbpIidFactoryTest {
         String ipAddress = "192.168.50.20/32";
         IpPrefix ipPrefix = new IpPrefix(ipAddress.toCharArray());
         ContextId ctxId = new ContextId("00000000-1111-2222-3333-44444555566667777");
-        InstanceIdentifier<ExternalGatewayAsEndpoint> id = NeutronGbpIidFactory.externalGatewayAsEndpoint(
-                ctxId, ipPrefix, MappingUtils.L3_CONTEXT);
+        InstanceIdentifier<ExternalGatewayAsEndpoint> id =
+            NeutronGbpIidFactory.externalGatewayAsEndpoint(ctxId, ipPrefix, MappingUtils.L3_CONTEXT);
         assertNotNull(id);
-        Class<?>[] expectedTypes = {Mappings.class, NeutronByGbpMappings.class, ExternalGatewaysAsEndpoints.class,
+        Class<?>[] expectedTypes =
+            {Mappings.class, NeutronByGbpMappings.class, ExternalGatewaysAsEndpoints.class,
                 ExternalGatewayAsEndpoint.class};
         assertPathArgumentTypes(id.getPathArguments(), expectedTypes);
         assertEquals(ExternalGatewayAsEndpoint.class, id.getTargetType());
         assertFalse(id.isWildcarded());
-        assertEquals(ctxId, id.firstKeyOf(ExternalGatewayAsEndpoint.class)
-            .getContextId());
-        assertEquals(MappingUtils.L3_CONTEXT, id.firstKeyOf(ExternalGatewayAsEndpoint.class)
-                .getContextType());
-        assertEquals(ipAddress, id.firstKeyOf(ExternalGatewayAsEndpoint.class)
-            .getAddress());
-        assertEquals(IpPrefixType.class, id.firstKeyOf(ExternalGatewayAsEndpoint.class)
-                .getAddressType());
+        assertEquals(ctxId, id.firstKeyOf(ExternalGatewayAsEndpoint.class).getContextId());
+        assertEquals(MappingUtils.L3_CONTEXT, id.firstKeyOf(ExternalGatewayAsEndpoint.class).getContextType());
+        assertEquals(ipAddress, id.firstKeyOf(ExternalGatewayAsEndpoint.class).getAddress());
+        assertEquals(IpPrefixType.class, id.firstKeyOf(ExternalGatewayAsEndpoint.class).getAddressType());
     }
 
     private static void assertPathArgumentTypes(Iterable<PathArgument> pathArguments, Class<?>[] expectedTypes) {

@@ -8,6 +8,8 @@
 
 package org.opendaylight.groupbasedpolicy.neutron.mapper.infrastructure;
 
+import com.google.common.collect.ImmutableList;
+
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
@@ -44,8 +46,6 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.subject.feature.instances.ActionInstance;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.subject.feature.instances.ClassifierInstance;
 
-import com.google.common.collect.ImmutableList;
-
 public class MetadataService extends ServiceUtil {
 
     private static final ClassifierName METADATA_SERVER_TO_CLIENT_NAME =
@@ -57,17 +57,16 @@ public class MetadataService extends ServiceUtil {
         new Description("Allow METADATA management communication between server and client.");
 
     /**
-     * Id of {@link #METADATA_CONTRACT}
+     * Id of {@link #METADATA_CONTRACT}.
      */
     public static final ContractId METADATA_CONTRACT_ID = new ContractId("be0675b7-b0d6-46cc-acf1-247ed31cf572");
     /**
-     * Contains rules with action {@link MappingUtils#ACTION_REF_ALLOW} matching ICMP and SSH
-     * communication
+     * Contains rules with action {@link MappingUtils#ACTION_REF_ALLOW} matching ICMP and SSH communication
      * between Client and Server.
      */
     public static final Contract METADATA_CONTRACT;
     /**
-     * {@link ConsumerNamedSelector} pointing to {@link #METADATA_CONTRACT}
+     * {@link ConsumerNamedSelector} pointing to {@link #METADATA_CONTRACT}.
      */
     public static final ConsumerNamedSelector METADATA_CONTRACT_CONSUMER_SELECTOR;
 
@@ -75,11 +74,11 @@ public class MetadataService extends ServiceUtil {
     private static final Name METADATA_SERVICE_EPG_NAME = new Name("NETWORK_SERVICE");
     private static final Description METADATA_SERVICE_EPG_DESC = new Description("Represents DHCP and DNS servers.");
     /**
-     * ID of {@link #EPG}
+     * ID of {@link #EPG}.
      */
     public static final EndpointGroupId EPG_ID = new EndpointGroupId("ffff1111-dfe5-11e4-8a00-1681e6b88ec1");
     /**
-     * Network-service endpoint-group providing {@link #METADATA_CONTRACT}
+     * Network-service endpoint-group providing {@link #METADATA_CONTRACT}.
      */
     public static final EndpointGroup EPG;
 
@@ -112,37 +111,44 @@ public class MetadataService extends ServiceUtil {
      *
      * @param tenantId location of {@link #METADATA_CONTRACT}
      * @param ipPrefix used in {@link L3EndpointIdentificationConstraints}
-     * @param wTx transaction where entities are written
+     * @param writeTx transaction where entities are written
      */
     public static void writeMetadataClauseWithConsProvEic(TenantId tenantId, @Nullable IpPrefix ipPrefix,
-        WriteTransaction wTx) {
+        WriteTransaction writeTx) {
         Clause clause = createClauseWithConsProvEic(ipPrefix, METADATA_SUBJECT_NAME);
-        wTx.put(LogicalDatastoreType.CONFIGURATION, IidFactory.clauseIid(tenantId, METADATA_CONTRACT_ID, clause.getName()),
-            clause, true);
+        writeTx.put(LogicalDatastoreType.CONFIGURATION, IidFactory.clauseIid(tenantId, METADATA_CONTRACT_ID,
+            clause.getName()), clause, true);
     }
 
     /**
      * Puts network service entities (classifier-instances, {@link #METADATA_CONTRACT},
-     * and {@link #EPG}) to {@link LogicalDatastoreType#CONFIGURATION}
+     * and {@link #EPG}) to {@link LogicalDatastoreType#CONFIGURATION}.
      *
      * @param tenantId location of network-service entities
-     * @param wTx transaction where network-service entities are written
+     * @param writeTx transaction where network-service entities are written
+     * @param metadataPort port for metadata
      */
-    public static void writeNetworkServiceEntitiesToTenant(TenantId tenantId, WriteTransaction wTx, long metadataPort) {
+    public static void writeNetworkServiceEntitiesToTenant(TenantId tenantId, WriteTransaction writeTx,
+        long metadataPort) {
+
         Set<ClassifierInstance> classifierInstances = getAllClassifierInstances(metadataPort);
         for (ClassifierInstance ci : classifierInstances) {
-            wTx.put(LogicalDatastoreType.CONFIGURATION, IidFactory.classifierInstanceIid(tenantId, ci.getName()), ci,
-                    true);
+            writeTx.put(LogicalDatastoreType.CONFIGURATION, IidFactory.classifierInstanceIid(tenantId, ci.getName()),
+                ci, true);
         }
         for (ActionInstance ai : Collections.singleton(MappingUtils.ACTION_ALLOW)) {
-            wTx.put(LogicalDatastoreType.CONFIGURATION, IidFactory.actionInstanceIid(tenantId, ai.getName()), ai, true);
-        }
-        wTx.put(LogicalDatastoreType.CONFIGURATION, IidFactory.contractIid(tenantId, METADATA_CONTRACT_ID), METADATA_CONTRACT,
+            writeTx.put(LogicalDatastoreType.CONFIGURATION, IidFactory.actionInstanceIid(tenantId, ai.getName()), ai,
                 true);
-        wTx.put(LogicalDatastoreType.CONFIGURATION, IidFactory.endpointGroupIid(tenantId, EPG_ID), EPG, true);
+        }
+        writeTx.put(LogicalDatastoreType.CONFIGURATION, IidFactory.contractIid(tenantId, METADATA_CONTRACT_ID),
+            METADATA_CONTRACT, true);
+        writeTx.put(LogicalDatastoreType.CONFIGURATION, IidFactory.endpointGroupIid(tenantId, EPG_ID), EPG, true);
     }
 
     /**
+     * Used to get all classifier-instances used in {@link #METADATA_CONTRACT} for specified port.
+     *
+     * @param metadataPort port for metadata
      * @return All classifier-instances used in {@link #METADATA_CONTRACT}
      */
     public static Set<ClassifierInstance> getAllClassifierInstances(long metadataPort) {

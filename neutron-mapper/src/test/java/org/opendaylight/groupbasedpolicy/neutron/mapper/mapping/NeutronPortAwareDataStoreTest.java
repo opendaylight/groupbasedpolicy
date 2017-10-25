@@ -12,6 +12,8 @@ import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import com.google.common.collect.ImmutableList;
+
 import java.util.Collections;
 import java.util.List;
 
@@ -45,8 +47,6 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.subnets.rev150712.s
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.subnets.rev150712.subnets.attributes.subnets.Subnet;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.subnets.rev150712.subnets.attributes.subnets.SubnetBuilder;
 
-import com.google.common.collect.ImmutableList;
-
 public class NeutronPortAwareDataStoreTest extends NeutronMapperDataBrokerTest {
 
     private final Uuid tenantUuid = new Uuid("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
@@ -61,18 +61,20 @@ public class NeutronPortAwareDataStoreTest extends NeutronMapperDataBrokerTest {
     private Neutron neutron;
 
     @Before
+    @SuppressWarnings("checkstyle:LineLength") // Longer lines in this method are caused by long package names,
+                                               // this will be removed when deprecated classes will be cleared.
     public void init() {
         dataBroker = getDataBroker();
         neutron = mock(Neutron.class);
         epRegistrator = mock(EndpointRegistrator.class);
         when(epRegistrator.registerEndpoint(any(RegisterEndpointInput.class))).thenReturn(true);
         when(epRegistrator.registerEndpoint(
-                any(org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.RegisterEndpointInput.class)))
-                    .thenReturn(true);
+            any(org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.RegisterEndpointInput.class)))
+            .thenReturn(true);
         when(epRegistrator.unregisterEndpoint(any(UnregisterEndpointInput.class))).thenReturn(true);
         when(epRegistrator.unregisterEndpoint(
-                any(org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.UnregisterEndpointInput.class)))
-                    .thenReturn(true);
+            any(org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.UnregisterEndpointInput.class)))
+            .thenReturn(true);
 
         portAware = new NeutronPortAware(dataBroker, epRegistrator, new IpPrefix(new Ipv4Prefix("192.168.192.168/32")));
     }

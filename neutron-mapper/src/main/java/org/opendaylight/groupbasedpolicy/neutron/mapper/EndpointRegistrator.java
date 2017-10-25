@@ -8,12 +8,15 @@
 
 package org.opendaylight.groupbasedpolicy.neutron.mapper;
 
-import javax.annotation.Nullable;
+import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
-import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableList;
+
+import javax.annotation.Nullable;
+
 import org.opendaylight.groupbasedpolicy.neutron.mapper.util.MappingUtils;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.IpAddress;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.IpPrefix;
@@ -71,10 +74,27 @@ public class EndpointRegistrator {
         }
     }
 
+    @Deprecated
+    @SuppressWarnings("checkstyle:LineLength") // Longer lines in this method are caused by long package names,
+    // this will be removed when deprecated classes will be cleared.
+    public boolean registerEndpoint(org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.RegisterEndpointInput regEndpointInput) {
+        try {
+            RpcResult<Void> rpcResult = epService.registerEndpoint(regEndpointInput).get();
+            if (!rpcResult.isSuccessful()) {
+                LOG.warn("Illegal state - register Endpoint was not successful. Input of RPC: {}", regEndpointInput);
+                return false;
+            }
+            return true;
+        } catch (InterruptedException | ExecutionException e) {
+            LOG.error("registerEndpoint failed. {}", regEndpointInput, e);
+            return false;
+        }
+    }
+
     public boolean unregisterEndpoint(AddressEndpointUnreg addrEpUnreg) {
         UnregisterEndpointInput input = new UnregisterEndpointInputBuilder().setAddressEndpointUnreg(
-                ImmutableList.<AddressEndpointUnreg>of(new AddressEndpointUnregBuilder().setKey(addrEpUnreg.getKey())
-                    .build())).build();
+            ImmutableList.<AddressEndpointUnreg>of(new AddressEndpointUnregBuilder().setKey(addrEpUnreg.getKey())
+                .build())).build();
         return unregisterEndpoint(input);
     }
 
@@ -93,21 +113,8 @@ public class EndpointRegistrator {
     }
 
     @Deprecated
-    public boolean registerEndpoint(org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.RegisterEndpointInput regEndpointInput) {
-        try {
-            RpcResult<Void> rpcResult = epService.registerEndpoint(regEndpointInput).get();
-            if (!rpcResult.isSuccessful()) {
-                LOG.warn("Illegal state - register Endpoint was not successful. Input of RPC: {}", regEndpointInput);
-                return false;
-            }
-            return true;
-        } catch (InterruptedException | ExecutionException e) {
-            LOG.error("registerEndpoint failed. {}", regEndpointInput, e);
-            return false;
-        }
-    }
-
-    @Deprecated
+    @SuppressWarnings("checkstyle:LineLength") // Longer lines in this method are caused by long package names,
+                                               // this will be removed when deprecated classes will be cleared.
     public boolean unregisterEndpoint(org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.UnregisterEndpointInput unregEndpointInput) {
         try {
             RpcResult<Void> rpcResult = epService.unregisterEndpoint(unregEndpointInput).get();
@@ -154,17 +161,20 @@ public class EndpointRegistrator {
     }
 
     @Deprecated
+    @SuppressWarnings("checkstyle:LineLength") // Longer lines in this method are caused by long package names,
+                                               // this will be removed when deprecated classes will be cleared.
     public boolean registerL3EpAsExternalGateway(TenantId tenantId, IpAddress ipAddress, L3ContextId l3Context,
             NetworkDomainId networkContainment) {
-        org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.RegisterEndpointInput registerEndpointInput =
-                new org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.RegisterEndpointInputBuilder()
-                    .setL3Address(ImmutableList
-                        .of(new L3AddressBuilder().setL3Context(l3Context).setIpAddress(ipAddress).build()))
-                    .setTenant(tenantId)
-                    .setNetworkContainment(networkContainment)
-                    .setEndpointGroups(ImmutableList.of(MappingUtils.EPG_EXTERNAL_ID))
-                    .setTimestamp(System.currentTimeMillis())
-                    .build();
+        org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.RegisterEndpointInput
+            registerEndpointInput =
+            new org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.RegisterEndpointInputBuilder()
+                .setL3Address(
+                    ImmutableList.of(new L3AddressBuilder().setL3Context(l3Context).setIpAddress(ipAddress).build()))
+                .setTenant(tenantId)
+                .setNetworkContainment(networkContainment)
+                .setEndpointGroups(ImmutableList.of(MappingUtils.EPG_EXTERNAL_ID))
+                .setTimestamp(System.currentTimeMillis())
+                .build();
         try {
             RpcResult<Void> rpcResult = epService.registerEndpoint(registerEndpointInput).get();
             if (!rpcResult.isSuccessful()) {
@@ -180,12 +190,13 @@ public class EndpointRegistrator {
     }
 
     @Deprecated
+    @SuppressWarnings("checkstyle:LineLength") // Longer lines in this method are caused by long package names,
+                                               // this will be removed when deprecated classes will be cleared.
     public boolean unregisterL3EpAsExternalGateway(IpAddress ipAddress, L3ContextId l3Context) {
-        org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.UnregisterEndpointInput unregisterEndpointInput =
+        org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.UnregisterEndpointInput
+            unregisterEndpointInput =
             new org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.UnregisterEndpointInputBuilder()
-                .setL3(ImmutableList.of(new L3Builder().setL3Context(l3Context)
-                    .setIpAddress(ipAddress)
-                    .build()))
+                .setL3(ImmutableList.of(new L3Builder().setL3Context(l3Context).setIpAddress(ipAddress).build()))
                 .build();
 
         try {

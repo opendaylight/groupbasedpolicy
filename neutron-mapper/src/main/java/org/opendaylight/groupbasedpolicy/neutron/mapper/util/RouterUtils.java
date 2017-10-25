@@ -8,13 +8,13 @@
 
 package org.opendaylight.groupbasedpolicy.neutron.mapper.util;
 
+import com.google.common.base.Optional;
+
 import javax.annotation.Nullable;
 
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.yang.types.rev130715.Uuid;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.l3.rev150712.routers.attributes.Routers;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.l3.rev150712.routers.attributes.routers.Router;
-
-import com.google.common.base.Optional;
 
 public class RouterUtils {
 

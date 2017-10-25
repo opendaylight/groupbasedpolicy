@@ -16,6 +16,10 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.google.common.base.Optional;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
+
 import java.io.IOException;
 import java.util.Set;
 
@@ -52,10 +56,6 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.secgroups.rev150712
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.secgroups.rev150712.security.groups.attributes.security.groups.SecurityGroup;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.secgroups.rev150712.security.groups.attributes.security.groups.SecurityGroupBuilder;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
-
-import com.google.common.base.Optional;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
 
 public class NeutronMapperTest extends NeutronMapperDataBrokerTest {
 
@@ -194,11 +194,11 @@ public class NeutronMapperTest extends NeutronMapperDataBrokerTest {
     }
 
     private Optional<L3Context> getL3ContextOptional(Network network) {
-        ReadOnlyTransaction rTx = dataBroker.newReadOnlyTransaction();
+        ReadOnlyTransaction readTx = dataBroker.newReadOnlyTransaction();
         TenantId tenantId = new TenantId(network.getTenantId().getValue());
         ContextId l3CtxId = new ContextId(network.getUuid().getValue());
         L3ContextId l3ContextId = new L3ContextId(l3CtxId);
         InstanceIdentifier<L3Context> l3ContextIid = IidFactory.l3ContextIid(tenantId, l3ContextId);
-        return DataStoreHelper.readFromDs(LogicalDatastoreType.CONFIGURATION, l3ContextIid, rTx);
+        return DataStoreHelper.readFromDs(LogicalDatastoreType.CONFIGURATION, l3ContextIid, readTx);
     }
 }

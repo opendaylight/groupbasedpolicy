@@ -9,6 +9,9 @@ package org.opendaylight.groupbasedpolicy.neutron.mapper.mapping;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
+import com.google.common.base.Optional;
+import com.google.common.base.Strings;
+
 import java.util.Collections;
 import java.util.List;
 import java.util.function.Function;
@@ -51,13 +54,12 @@ import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.base.Optional;
-import com.google.common.base.Strings;
-
+@SuppressWarnings("checkstyle:LineLength") // Longer lines in this class are caused by long package names,
+                                           // this will be removed when deprecated classes will be cleared.
 public class NeutronSubnetAware implements
         NeutronAware<org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.subnets.rev150712.subnets.attributes.subnets.Subnet> {
 
-    private final static Logger LOG = LoggerFactory.getLogger(NeutronSubnetAware.class);
+    private static final Logger LOG = LoggerFactory.getLogger(NeutronSubnetAware.class);
     public static final InstanceIdentifier<org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.subnets.rev150712.subnets.attributes.subnets.Subnet> SUBNET_WILDCARD_IID =
             InstanceIdentifier.builder(Neutron.class)
                 .child(Subnets.class)
@@ -148,7 +150,8 @@ public class NeutronSubnetAware implements
                     .stream()
                     .filter(net -> net.getUuid().equals(port.getNetworkId()))
                     .filter(net -> net.getAugmentation(NetworkProviderExtension.class) != null)
-                    .anyMatch(net -> net.getAugmentation(NetworkProviderExtension.class).getPhysicalNetwork() != null)) {
+                    .anyMatch(
+                        net -> net.getAugmentation(NetworkProviderExtension.class).getPhysicalNetwork() != null)) {
                     // add virtual router IP only in case it is provider physical network
                     sb.setVirtualRouterIp(subnet.getGatewayIp());
                 }
@@ -184,14 +187,15 @@ public class NeutronSubnetAware implements
         if (!Strings.isNullOrEmpty(subnet.getName())) {
             try {
                 ndb.setName(new Name(subnet.getName()));
-            } catch (Exception e) {
+            } catch (NullPointerException | IllegalArgumentException e) {
                 LOG.info("Name '{}' of Neutron Subnet '{}' is ignored.", subnet.getName(), subnet.getUuid().getValue());
                 LOG.debug("Name exception", e);
             }
         }
         ndb.setNetworkDomainId(new NetworkDomainId(subnet.getUuid().getValue()));
         ndb.setNetworkDomainType(MappingUtils.SUBNET);
-        ndb.setParent(MappingUtils.createParent(new NetworkDomainId(subnet.getNetworkId().getValue()), L2FloodDomain.class));
+        ndb.setParent(
+            MappingUtils.createParent(new NetworkDomainId(subnet.getNetworkId().getValue()), L2FloodDomain.class));
         ndb.addAugmentation(SubnetAugmentForwarding.class, new SubnetAugmentForwardingBuilder().setSubnet(sb.build())
             .build());
         return ndb.build();
@@ -230,7 +234,7 @@ public class NeutronSubnetAware implements
         if (!Strings.isNullOrEmpty(subnet.getName())) {
             try {
                 subnetBuilder.setName(new Name(subnet.getName()));
-            } catch (Exception e) {
+            } catch (NullPointerException | IllegalArgumentException e) {
                 LOG.info("Name '{}' of Neutron Subnet '{}' is ignored.", subnet.getName(),
                         subnet.getUuid().getValue());
                 LOG.debug("Name exception", e);
@@ -258,8 +262,8 @@ public class NeutronSubnetAware implements
         ReadWriteTransaction rwTx = dataProvider.newReadWriteTransaction();
         NetworkDomainId subnetId = new NetworkDomainId(neutronSubnet.getUuid().getValue());
         TenantId tenantId = new TenantId(neutronSubnet.getTenantId().getValue());
-        Optional<NetworkDomain> potentialSubnetDomain = DataStoreHelper.removeIfExists(LogicalDatastoreType.CONFIGURATION,
-                L2L3IidFactory.subnetIid(tenantId, subnetId), rwTx);
+        Optional<NetworkDomain> potentialSubnetDomain = DataStoreHelper.removeIfExists(
+            LogicalDatastoreType.CONFIGURATION, L2L3IidFactory.subnetIid(tenantId, subnetId), rwTx);
         if (!potentialSubnetDomain.isPresent()) {
             LOG.warn("Illegal state - subnet network domain {} does not exist.", subnetId.getValue());
             rwTx.cancel();

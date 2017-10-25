@@ -8,6 +8,9 @@
 
 package org.opendaylight.groupbasedpolicy.neutron.mapper.mapping.rule;
 
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableList;
+
 import java.util.List;
 
 import javax.annotation.concurrent.Immutable;
@@ -23,9 +26,6 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.contract.subject.RuleBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.subject.feature.instances.ClassifierInstance;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.secgroups.rev150712.security.rules.attributes.security.rules.SecurityRule;
-
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.ImmutableList;
 
 @Immutable
 public class SingleClassifierRule {
@@ -110,14 +110,14 @@ public class SingleClassifierRule {
 
     private static boolean isRangePortParam(ParameterValue pv) {
         String pvName = pv.getName().getValue();
-        return pv.getRangeValue() != null
-                && (pvName.equals(L4ClassifierDefinition.SRC_PORT_RANGE_PARAM) || pvName.equals(L4ClassifierDefinition.DST_PORT_RANGE_PARAM));
+        return pv.getRangeValue() != null && (pvName.equals(L4ClassifierDefinition.SRC_PORT_RANGE_PARAM)
+            || pvName.equals(L4ClassifierDefinition.DST_PORT_RANGE_PARAM));
     }
 
     private static boolean isSrcOrDstPortParam(ParameterValue pv) {
         String pvName = pv.getName().getValue();
-        return pv.getIntValue() != null
-                && (pvName.equals(L4ClassifierDefinition.SRC_PORT_PARAM) || pvName.equals(L4ClassifierDefinition.DST_PORT_PARAM));
+        return pv.getIntValue() != null && (pvName.equals(L4ClassifierDefinition.SRC_PORT_PARAM)
+            || pvName.equals(L4ClassifierDefinition.DST_PORT_PARAM));
     }
 
 }

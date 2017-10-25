@@ -8,6 +8,9 @@
 
 package org.opendaylight.groupbasedpolicy.neutron.mapper.util;
 
+import com.google.common.base.Optional;
+import com.google.common.base.Strings;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -20,9 +23,6 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.l3.ext.rev150712.Ne
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.networks.rev150712.networks.attributes.Networks;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.networks.rev150712.networks.attributes.networks.Network;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.provider.ext.rev150712.NetworkProviderExtension;
-
-import com.google.common.base.Optional;
-import com.google.common.base.Strings;
 
 public class NetworkUtils {
 

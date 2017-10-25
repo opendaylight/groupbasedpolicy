@@ -8,13 +8,13 @@
 
 package org.opendaylight.groupbasedpolicy.neutron.mapper.util;
 
+import com.google.common.base.Optional;
+
 import javax.annotation.Nullable;
 
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.yang.types.rev130715.Uuid;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.subnets.rev150712.subnets.attributes.Subnets;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.subnets.rev150712.subnets.attributes.subnets.Subnet;
-
-import com.google.common.base.Optional;
 
 public class SubnetUtils {
 

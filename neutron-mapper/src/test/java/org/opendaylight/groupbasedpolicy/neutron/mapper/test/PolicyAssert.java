@@ -13,6 +13,9 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
+import com.google.common.base.Optional;
+import com.google.common.base.Preconditions;
+
 import java.util.Collection;
 import java.util.List;
 import java.util.Set;
@@ -42,9 +45,6 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.subject.feature.instances.ClassifierInstance;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.secgroups.rev150712.security.rules.attributes.security.rules.SecurityRule;
 
-import com.google.common.base.Optional;
-import com.google.common.base.Preconditions;
-
 public final class PolicyAssert {
 
     private PolicyAssert() {
@@ -65,7 +65,9 @@ public final class PolicyAssert {
 
     // asserts for contract
 
-    public static void assertContractExists(DataBroker dataBroker, String tenantId, String contractId) throws Exception {
+    public static void assertContractExists(DataBroker dataBroker, String tenantId, String contractId)
+        throws Exception {
+
         Optional<Contract> contract = ConfigDataStoreReader.readContract(dataBroker, tenantId, contractId);
         assertTrue(contract.isPresent());
     }
@@ -267,7 +269,8 @@ public final class PolicyAssert {
         assertEquals(SecRuleNameDecoder.getSubjectName(secRule), subjectRef);
     }
 
-    public static void assertClauseExists(DataBroker dataBroker, String tenantId, String contractId, String clauseName) {
+    public static void assertClauseExists(DataBroker dataBroker, String tenantId, String contractId,
+        String clauseName) {
         Optional<Clause> clause = ConfigDataStoreReader.readClause(dataBroker, tenantId, contractId, clauseName);
         assertTrue(clause.isPresent());
     }
@@ -297,14 +300,13 @@ public final class PolicyAssert {
         assertEquals(order, rule.getOrder().intValue());
     }
 
-    private static <T> T assertOneItem(Collection<T> c) {
-        assertNotNull(c);
-        assertTrue(c.size() == 1);
-        return c.iterator().next();
+    private static <T> T assertOneItem(Collection<T> collection) {
+        assertNotNull(collection);
+        assertTrue(collection.size() == 1);
+        return collection.iterator().next();
     }
 
     // asserts for selector
-
     public static void assertConsumerNamedSelectorExists(DataBroker dataBroker, String tenantId, String egId,
                                                          String selectorName) {
         Optional<ConsumerNamedSelector> potentialCns = ConfigDataStoreReader.readConsumerNamedSelector(dataBroker,

@@ -10,6 +10,10 @@ package org.opendaylight.groupbasedpolicy.neutron.mapper.mapping.rule;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import com.google.common.base.Optional;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -47,13 +51,8 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.secgroups.rev150712
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.secgroups.rev150712.security.rules.attributes.security.rules.SecurityRule;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.secgroups.rev150712.security.rules.attributes.security.rules.SecurityRuleBuilder;
 
-import com.google.common.base.Optional;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
-
 /**
- * END 2 END TESTING - inputs are Neutron entities and expected outputs are GBP entities in
- * datastore
+ * END 2 END TESTING - inputs are Neutron entities and expected outputs are GBP entities in datastore.
  */
 
 public class NeutronSecurityRuleAwareDataStoreTest extends NeutronMapperDataBrokerTest {
@@ -67,36 +66,38 @@ public class NeutronSecurityRuleAwareDataStoreTest extends NeutronMapperDataBrok
 
     @Test
     public final void testAddNeutronSecurityRule_rulesWithRemoteIpPrefix() throws Exception {
-        String tenant = "ad4c6c25-2424-4ad3-97ee-f9691ce03645";
-        String goldSecGrp = "fe40e28f-ad6a-4a2d-b12a-47510876344a";
-        SecurityRule goldInIpv4 = NeutronEntityFactory.securityRuleWithEtherType(
-                "166aedab-fdf5-4788-9e36-2b00b5f8722f", tenant, EthertypeV4.class, DirectionIngress.class, goldSecGrp,
-                null);
-        SecurityRule goldOutIpv4 = NeutronEntityFactory.securityRuleWithEtherType(
-                "dabfd4da-af89-45dd-85f8-181768c1b4c9", tenant, EthertypeV4.class, DirectionEgress.class, goldSecGrp,
-                null);
-        String serverSecGrp = "71cf4fe5-b146-409e-8151-cd921298ce32";
-        SecurityRuleAttributes.Protocol protocolTcp = new SecurityRuleAttributes.Protocol(ProtocolTcp.class);
-        SecurityRule serverIn80Tcp10_1_1_0 = new SecurityRuleBuilder().setUuid(new Uuid("9dbb533d-d9b2-4dc9-bae7-ee60c8df184d"))
-                .setTenantId(new Uuid(tenant))
-                .setEthertype(EthertypeV4.class)
-                .setProtocol(protocolTcp)
-                .setPortRangeMin(80)
-                .setPortRangeMax(80)
-                .setDirection(DirectionIngress.class)
-                .setSecurityGroupId(new Uuid(serverSecGrp))
-                .setRemoteIpPrefix(new IpPrefix(new Ipv4Prefix("10.1.1.0/24")))
-                .build();
-        SecurityRule serverInIp20_1_1_0 = new SecurityRuleBuilder().setUuid(new Uuid("adf7e558-de47-4f9e-a9b8-96e19db5d1ac"))
-                .setTenantId(new Uuid(tenant))
-                .setEthertype(EthertypeV4.class)
-                .setDirection(DirectionIngress.class)
-                .setSecurityGroupId(new Uuid(serverSecGrp))
-                .setRemoteIpPrefix(new IpPrefix(new Ipv4Prefix("20.1.1.0/24")))
-                .build();
-        SecurityRule serverOutIpv4 = NeutronEntityFactory.securityRuleWithEtherType(
-                "8b9c48d3-44a8-46be-be35-6f3237d98071", tenant, EthertypeV4.class, DirectionEgress.class, serverSecGrp,
-                null);
+        final String tenant = "ad4c6c25-2424-4ad3-97ee-f9691ce03645";
+        final String goldSecGrp = "fe40e28f-ad6a-4a2d-b12a-47510876344a";
+        final SecurityRule goldInIpv4 = NeutronEntityFactory.securityRuleWithEtherType(
+            "166aedab-fdf5-4788-9e36-2b00b5f8722f", tenant, EthertypeV4.class, DirectionIngress.class, goldSecGrp,
+            null);
+        final SecurityRule goldOutIpv4 = NeutronEntityFactory.securityRuleWithEtherType(
+            "dabfd4da-af89-45dd-85f8-181768c1b4c9", tenant, EthertypeV4.class, DirectionEgress.class, goldSecGrp,
+            null);
+        final String serverSecGrp = "71cf4fe5-b146-409e-8151-cd921298ce32";
+        final SecurityRuleAttributes.Protocol protocolTcp = new SecurityRuleAttributes.Protocol(ProtocolTcp.class);
+        final SecurityRule serverIn80Tcp10_1_1_0 = new SecurityRuleBuilder()
+            .setUuid(new Uuid("9dbb533d-d9b2-4dc9-bae7-ee60c8df184d"))
+            .setTenantId(new Uuid(tenant))
+            .setEthertype(EthertypeV4.class)
+            .setProtocol(protocolTcp)
+            .setPortRangeMin(80)
+            .setPortRangeMax(80)
+            .setDirection(DirectionIngress.class)
+            .setSecurityGroupId(new Uuid(serverSecGrp))
+            .setRemoteIpPrefix(new IpPrefix(new Ipv4Prefix("10.1.1.0/24")))
+            .build();
+        final SecurityRule serverInIp20_1_1_0 = new SecurityRuleBuilder()
+            .setUuid(new Uuid("adf7e558-de47-4f9e-a9b8-96e19db5d1ac"))
+            .setTenantId(new Uuid(tenant))
+            .setEthertype(EthertypeV4.class)
+            .setDirection(DirectionIngress.class)
+            .setSecurityGroupId(new Uuid(serverSecGrp))
+            .setRemoteIpPrefix(new IpPrefix(new Ipv4Prefix("20.1.1.0/24")))
+            .build();
+        final SecurityRule serverOutIpv4 = NeutronEntityFactory.securityRuleWithEtherType(
+            "8b9c48d3-44a8-46be-be35-6f3237d98071", tenant, EthertypeV4.class, DirectionEgress.class, serverSecGrp,
+            null);
         DataBroker dataBroker = getDataBroker();
         List<SecurityGroup> secGroups = new ArrayList<>();
         secGroups.add(NeutronEntityFactory.securityGroup(goldSecGrp, tenant));
@@ -175,12 +176,12 @@ public class NeutronSecurityRuleAwareDataStoreTest extends NeutronMapperDataBrok
         final String secRuleId1 = "dddddddd-dddd-dddd-dddd-dddddddddddd";
         final String secRuleId2 = "eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee";
 
-        List<SecurityGroup> secGroups = new ArrayList<>();
+        final List<SecurityGroup> secGroups = new ArrayList<>();
         secGroups.add(NeutronEntityFactory.securityGroup(secGroupId1, tenantId));
         secGroups.add(NeutronEntityFactory.securityGroup(secGroupId2, tenantId));
-        SecurityRule secRule1 = NeutronEntityFactory.securityRuleWithEtherType(secRuleId1, tenantId,
+        final SecurityRule secRule1 = NeutronEntityFactory.securityRuleWithEtherType(secRuleId1, tenantId,
                 EthertypeV4.class, DirectionEgress.class, secGroupId1, secGroupId2);
-        SecurityRule secRule2 = NeutronEntityFactory.securityRuleWithEtherType(secRuleId2, tenantId,
+        final SecurityRule secRule2 = NeutronEntityFactory.securityRuleWithEtherType(secRuleId2, tenantId,
                 EthertypeV4.class, DirectionIngress.class, secGroupId2, secGroupId1);
         NeutronBuilder neutronBuilder = new NeutronBuilder()
             .setSecurityGroups(new SecurityGroupsBuilder().setSecurityGroup(secGroups).build())
@@ -269,19 +270,19 @@ public class NeutronSecurityRuleAwareDataStoreTest extends NeutronMapperDataBrok
     public final void testAddNeutronSecurityRule_rulesWithoutRemote() throws Exception {
         String tenant = "ad4c6c25-2424-4ad3-97ee-f9691ce03645";
         String goldSecGrp = "fe40e28f-ad6a-4a2d-b12a-47510876344a";
-        SecurityRule goldInIpv4 = NeutronEntityFactory.securityRuleWithEtherType(
-                "166aedab-fdf5-4788-9e36-2b00b5f8722f", tenant, EthertypeV4.class, DirectionIngress.class, goldSecGrp,
-                null);
-        SecurityRule goldOutIpv4 = NeutronEntityFactory.securityRuleWithEtherType(
-                "dabfd4da-af89-45dd-85f8-181768c1b4c9", tenant, EthertypeV4.class, DirectionEgress.class, goldSecGrp,
-                null);
+        SecurityRule goldInIpv4 =
+            NeutronEntityFactory.securityRuleWithEtherType("166aedab-fdf5-4788-9e36-2b00b5f8722f", tenant,
+                EthertypeV4.class, DirectionIngress.class, goldSecGrp, null);
+        SecurityRule goldOutIpv4 =
+            NeutronEntityFactory.securityRuleWithEtherType("dabfd4da-af89-45dd-85f8-181768c1b4c9", tenant,
+                EthertypeV4.class, DirectionEgress.class, goldSecGrp, null);
         String serverSecGrp = "71cf4fe5-b146-409e-8151-cd921298ce32";
-        SecurityRule serverOutIpv4 = NeutronEntityFactory.securityRuleWithEtherType(
-                "8b9c48d3-44a8-46be-be35-6f3237d98071", tenant, EthertypeV4.class, DirectionEgress.class, serverSecGrp,
-                null);
-        SecurityRule serverInIpv4 = NeutronEntityFactory.securityRuleWithEtherType(
-                "adf7e558-de47-4f9e-a9b8-96e19db5d1ac", tenant, EthertypeV4.class, DirectionIngress.class, serverSecGrp,
-                null);
+        SecurityRule serverOutIpv4 =
+            NeutronEntityFactory.securityRuleWithEtherType("8b9c48d3-44a8-46be-be35-6f3237d98071", tenant,
+                EthertypeV4.class, DirectionEgress.class, serverSecGrp, null);
+        SecurityRule serverInIpv4 =
+            NeutronEntityFactory.securityRuleWithEtherType("adf7e558-de47-4f9e-a9b8-96e19db5d1ac", tenant,
+                EthertypeV4.class, DirectionIngress.class, serverSecGrp, null);
         DataBroker dataBroker = getDataBroker();
         List<SecurityGroup> secGroups = new ArrayList<>();
         secGroups.add(NeutronEntityFactory.securityGroup(goldSecGrp, tenant));
@@ -344,25 +345,26 @@ public class NeutronSecurityRuleAwareDataStoreTest extends NeutronMapperDataBrok
         String tenant = "ad4c6c25-2424-4ad3-97ee-f9691ce03645";
         String goldSecGrp = "fe40e28f-ad6a-4a2d-b12a-47510876344a";
         SecurityRule goldInIpv4 = NeutronEntityFactory.securityRuleWithEtherType(
-                "166aedab-fdf5-4788-9e36-2b00b5f8722f", tenant, EthertypeV4.class, DirectionIngress.class, goldSecGrp,
-                null);
+            "166aedab-fdf5-4788-9e36-2b00b5f8722f", tenant, EthertypeV4.class, DirectionIngress.class, goldSecGrp,
+            null);
         SecurityRule goldOutIpv4 = NeutronEntityFactory.securityRuleWithEtherType(
-                "dabfd4da-af89-45dd-85f8-181768c1b4c9", tenant, EthertypeV4.class, DirectionEgress.class, goldSecGrp,
-                null);
+            "dabfd4da-af89-45dd-85f8-181768c1b4c9", tenant, EthertypeV4.class, DirectionEgress.class, goldSecGrp,
+            null);
         String serverSecGrp = "71cf4fe5-b146-409e-8151-cd921298ce32";
         SecurityRule serverOutIpv4 = NeutronEntityFactory.securityRuleWithEtherType(
-                "8b9c48d3-44a8-46be-be35-6f3237d98071", tenant, EthertypeV4.class, DirectionEgress.class, serverSecGrp,
-                null);
+            "8b9c48d3-44a8-46be-be35-6f3237d98071", tenant, EthertypeV4.class, DirectionEgress.class, serverSecGrp,
+            null);
         SecurityRuleAttributes.Protocol protocolTcp = new SecurityRuleAttributes.Protocol(ProtocolTcp.class);
-        SecurityRule serverIn80TcpIpv4 = new SecurityRuleBuilder().setUuid(new Uuid("adf7e558-de47-4f9e-a9b8-96e19db5d1ac"))
-                .setTenantId(new Uuid(tenant))
-                .setEthertype(EthertypeV4.class)
-                .setProtocol(protocolTcp)
-                .setPortRangeMin(80)
-                .setPortRangeMax(80)
-                .setDirection(DirectionIngress.class)
-                .setSecurityGroupId(new Uuid(serverSecGrp))
-                .build();
+        SecurityRule serverIn80TcpIpv4 = new SecurityRuleBuilder()
+            .setUuid(new Uuid("adf7e558-de47-4f9e-a9b8-96e19db5d1ac"))
+            .setTenantId(new Uuid(tenant))
+            .setEthertype(EthertypeV4.class)
+            .setProtocol(protocolTcp)
+            .setPortRangeMin(80)
+            .setPortRangeMax(80)
+            .setDirection(DirectionIngress.class)
+            .setSecurityGroupId(new Uuid(serverSecGrp))
+            .build();
         DataBroker dataBroker = getDataBroker();
         List<SecurityGroup> secGroups = new ArrayList<>();
         secGroups.add(NeutronEntityFactory.securityGroup(goldSecGrp, tenant));
@@ -421,20 +423,20 @@ public class NeutronSecurityRuleAwareDataStoreTest extends NeutronMapperDataBrok
 
     @Test
     public final void testAddNeutronSecurityRule_defaultSecGrp() throws Exception {
-        String tenant = "111aaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa";
-        String defaultSecGrp = "111fffff-ffff-ffff-ffff-ffffffffffff";
-        SecurityRule defaultInIpv4Default = NeutronEntityFactory.securityRuleWithEtherType(
-                "111ccccc-111c-cccc-cccc-cccccccccccc", tenant, EthertypeV4.class, DirectionIngress.class, defaultSecGrp,
-                defaultSecGrp);
-        SecurityRule defaultInIpv6Default = NeutronEntityFactory.securityRuleWithEtherType(
-                "222ccccc-111c-cccc-cccc-cccccccccccc", tenant, EthertypeV4.class, DirectionIngress.class, defaultSecGrp,
-                defaultSecGrp);
-        SecurityRule defaultOutIpv4 = NeutronEntityFactory.securityRuleWithEtherType(
-                "333ccccc-111c-cccc-cccc-cccccccccccc", tenant, EthertypeV4.class, DirectionEgress.class, defaultSecGrp,
-                null);
-        SecurityRule defaultOutIpv6 = NeutronEntityFactory.securityRuleWithEtherType(
-                "444ccccc-111c-cccc-cccc-cccccccccccc", tenant, EthertypeV4.class, DirectionEgress.class, defaultSecGrp,
-                null);
+        final String tenant = "111aaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa";
+        final String defaultSecGrp = "111fffff-ffff-ffff-ffff-ffffffffffff";
+        final SecurityRule defaultInIpv4Default = NeutronEntityFactory.securityRuleWithEtherType(
+            "111ccccc-111c-cccc-cccc-cccccccccccc", tenant, EthertypeV4.class, DirectionIngress.class, defaultSecGrp,
+            defaultSecGrp);
+        final SecurityRule defaultInIpv6Default = NeutronEntityFactory.securityRuleWithEtherType(
+            "222ccccc-111c-cccc-cccc-cccccccccccc", tenant, EthertypeV4.class, DirectionIngress.class, defaultSecGrp,
+            defaultSecGrp);
+        final SecurityRule defaultOutIpv4 = NeutronEntityFactory.securityRuleWithEtherType(
+            "333ccccc-111c-cccc-cccc-cccccccccccc", tenant, EthertypeV4.class, DirectionEgress.class, defaultSecGrp,
+            null);
+        final SecurityRule defaultOutIpv6 = NeutronEntityFactory.securityRuleWithEtherType(
+            "444ccccc-111c-cccc-cccc-cccccccccccc", tenant, EthertypeV4.class, DirectionEgress.class, defaultSecGrp,
+            null);
         DataBroker dataBroker = getDataBroker();
         List<SecurityGroup> secGroups = new ArrayList<>();
         secGroups.add(NeutronEntityFactory.securityGroup(defaultSecGrp, tenant));

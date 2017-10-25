@@ -10,12 +10,14 @@ package org.opendaylight.groupbasedpolicy.neutron.mapper.test;
 
 import static com.google.common.base.Preconditions.checkState;
 
-import javax.annotation.Nonnull;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.ImmutableSet.Builder;
+
 import java.io.IOException;
 import java.util.Collection;
 
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.ImmutableSet.Builder;
+import javax.annotation.Nonnull;
+
 import org.opendaylight.controller.md.sal.binding.test.AbstractDataBrokerTest;
 import org.opendaylight.yangtools.yang.binding.YangModuleInfo;
 import org.opendaylight.yangtools.yang.binding.util.BindingReflections;
@@ -37,6 +39,8 @@ public abstract class CustomDataBrokerTest extends AbstractDataBrokerTest {
     }
 
     /**
+     * Used to get classes from yang modules.
+     *
      * @return a class from every yang module which needs to be loaded. Cannot return {@code null}
      *         or empty collection.
      */

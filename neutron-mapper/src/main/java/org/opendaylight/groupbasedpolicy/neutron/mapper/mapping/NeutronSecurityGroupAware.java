@@ -9,6 +9,9 @@ package org.opendaylight.groupbasedpolicy.neutron.mapper.mapping;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
+import com.google.common.base.Optional;
+import com.google.common.base.Strings;
+
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
@@ -30,9 +33,6 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.secgroups.rev150712
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.google.common.base.Optional;
-import com.google.common.base.Strings;
 
 public class NeutronSecurityGroupAware implements NeutronAware<SecurityGroup> {
 
@@ -66,24 +66,25 @@ public class NeutronSecurityGroupAware implements NeutronAware<SecurityGroup> {
             // TODO This needs to be reworked, SecGroups shouldn't use TenantId, Neutron doesn't always configure it
             return true;
         }
-        TenantId tId = new TenantId(secGroup.getTenantId().getValue());
+        TenantId tenantId = new TenantId(secGroup.getTenantId().getValue());
         EndpointGroupId epgId = new EndpointGroupId(secGroup.getUuid().getValue());
         if (epgId.getValue().equals(MappingUtils.EIG_UUID.getValue())) {
             ExternalImplicitGroup eig = new ExternalImplicitGroupBuilder().setId(epgId).build();
-            rwTx.put(LogicalDatastoreType.CONFIGURATION, IidFactory.externalImplicitGroupIid(tId, epgId), eig, true);
+            rwTx.put(LogicalDatastoreType.CONFIGURATION, IidFactory.externalImplicitGroupIid(tenantId, epgId), eig,
+                true);
         }
         EndpointGroupBuilder epgBuilder = new EndpointGroupBuilder().setId(epgId);
         if (!Strings.isNullOrEmpty(secGroup.getName())) {
             try {
                 epgBuilder.setName(new Name(secGroup.getName()));
-            } catch (Exception e) {
+            } catch (NullPointerException | IllegalArgumentException e) {
                 LOG.info("Name '{}' of Neutron Security-group '{}' is ignored.", secGroup.getName(),
                         secGroup.getUuid().getValue());
                 LOG.debug("Name exception", e);
             }
         }
         epgBuilder.setIntraGroupPolicy(IntraGroupPolicy.RequireContract);
-        rwTx.put(LogicalDatastoreType.CONFIGURATION, IidFactory.endpointGroupIid(tId, epgId),
+        rwTx.put(LogicalDatastoreType.CONFIGURATION, IidFactory.endpointGroupIid(tenantId, epgId),
                 epgBuilder.build(), true);
         return true;
     }

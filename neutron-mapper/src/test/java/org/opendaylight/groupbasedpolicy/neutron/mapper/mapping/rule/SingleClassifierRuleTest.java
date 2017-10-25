@@ -81,35 +81,44 @@ public class SingleClassifierRuleTest {
 
     @Test
     public final void updateOrderBasedOnL4ClassifTest() throws Exception {
-        ParameterValue sPort = createIntParameterValue(L4ClassifierDefinition.SRC_PORT_PARAM, Long.valueOf(4999));
-        ParameterValue dPort = createIntParameterValue(L4ClassifierDefinition.DST_PORT_PARAM, Long.valueOf(8080));
-        ParameterValue sMiniRange = createRangeParameterValue(L4ClassifierDefinition.SRC_PORT_RANGE_PARAM, 1000, 1000);
-        ParameterValue dMiniRange = createRangeParameterValue(L4ClassifierDefinition.DST_PORT_RANGE_PARAM, 2000, 2000);
-        ParameterValue sPortRange = createRangeParameterValue(L4ClassifierDefinition.SRC_PORT_RANGE_PARAM, 3335, 3336);
-        ParameterValue dPortRange = createRangeParameterValue(L4ClassifierDefinition.DST_PORT_RANGE_PARAM, 9998, 9999);
-        ClassifierInstance ci;
-        ci = createClassifierInstance(L4ClassifierDefinition.ID, dPortRange);
-        assertEquals(SingleClassifierRule.updateOrderBasedOn(ci, allow, 0), 180);
-        ci = createClassifierInstance(L4ClassifierDefinition.ID, sPortRange);
-        assertEquals(SingleClassifierRule.updateOrderBasedOn(ci, allow, 0), 180);
-        ci = createClassifierInstance(L4ClassifierDefinition.ID, sPort);
-        assertEquals(SingleClassifierRule.updateOrderBasedOn(ci, allow, 0), 170);
-        ci = createClassifierInstance(L4ClassifierDefinition.ID, sMiniRange);
-        assertEquals(SingleClassifierRule.updateOrderBasedOn(ci, allow, 0), 170);
-        ci = createClassifierInstance(L4ClassifierDefinition.ID, dPort);
-        assertEquals(SingleClassifierRule.updateOrderBasedOn(ci, allow, 0), 170);
-        ci = createClassifierInstance(L4ClassifierDefinition.ID, dMiniRange);
-        assertEquals(SingleClassifierRule.updateOrderBasedOn(ci, allow, 0), 170);
-        ci = createClassifierInstance(L4ClassifierDefinition.ID, sPortRange, dPortRange);
-        assertEquals(SingleClassifierRule.updateOrderBasedOn(ci, allow, 0), 160);
-        ci = createClassifierInstance(L4ClassifierDefinition.ID, sPortRange, dPort);
-        assertEquals(SingleClassifierRule.updateOrderBasedOn(ci, allow, 0), 150);
-        ci = createClassifierInstance(L4ClassifierDefinition.ID, sPortRange, dMiniRange);
-        assertEquals(SingleClassifierRule.updateOrderBasedOn(ci, allow, 0), 150);
-        ci = createClassifierInstance(L4ClassifierDefinition.ID, dPortRange, sPort);
-        assertEquals(SingleClassifierRule.updateOrderBasedOn(ci, allow, 0), 150);
-        ci = createClassifierInstance(L4ClassifierDefinition.ID, dPortRange, sMiniRange);
-        assertEquals(SingleClassifierRule.updateOrderBasedOn(ci, allow, 0), 150);
+        final ParameterValue sourcePort = createIntParameterValue(L4ClassifierDefinition.SRC_PORT_PARAM, 4999L);
+        final ParameterValue destPort = createIntParameterValue(L4ClassifierDefinition.DST_PORT_PARAM, 8080L);
+        final ParameterValue
+            sourceMiniRange =
+            createRangeParameterValue(L4ClassifierDefinition.SRC_PORT_RANGE_PARAM, 1000, 1000);
+        final ParameterValue
+            destinationMiniRange =
+            createRangeParameterValue(L4ClassifierDefinition.DST_PORT_RANGE_PARAM, 2000, 2000);
+        final ParameterValue
+            sourcePortRange =
+            createRangeParameterValue(L4ClassifierDefinition.SRC_PORT_RANGE_PARAM, 3335, 3336);
+        final ParameterValue
+            destinationPortRange =
+            createRangeParameterValue(L4ClassifierDefinition.DST_PORT_RANGE_PARAM, 9998, 9999);
+
+        ClassifierInstance classifierInstance;
+        classifierInstance = createClassifierInstance(L4ClassifierDefinition.ID, destinationPortRange);
+        assertEquals(SingleClassifierRule.updateOrderBasedOn(classifierInstance, allow, 0), 180);
+        classifierInstance = createClassifierInstance(L4ClassifierDefinition.ID, sourcePortRange);
+        assertEquals(SingleClassifierRule.updateOrderBasedOn(classifierInstance, allow, 0), 180);
+        classifierInstance = createClassifierInstance(L4ClassifierDefinition.ID, sourcePort);
+        assertEquals(SingleClassifierRule.updateOrderBasedOn(classifierInstance, allow, 0), 170);
+        classifierInstance = createClassifierInstance(L4ClassifierDefinition.ID, sourceMiniRange);
+        assertEquals(SingleClassifierRule.updateOrderBasedOn(classifierInstance, allow, 0), 170);
+        classifierInstance = createClassifierInstance(L4ClassifierDefinition.ID, destPort);
+        assertEquals(SingleClassifierRule.updateOrderBasedOn(classifierInstance, allow, 0), 170);
+        classifierInstance = createClassifierInstance(L4ClassifierDefinition.ID, destinationMiniRange);
+        assertEquals(SingleClassifierRule.updateOrderBasedOn(classifierInstance, allow, 0), 170);
+        classifierInstance = createClassifierInstance(L4ClassifierDefinition.ID, sourcePortRange, destinationPortRange);
+        assertEquals(SingleClassifierRule.updateOrderBasedOn(classifierInstance, allow, 0), 160);
+        classifierInstance = createClassifierInstance(L4ClassifierDefinition.ID, sourcePortRange, destPort);
+        assertEquals(SingleClassifierRule.updateOrderBasedOn(classifierInstance, allow, 0), 150);
+        classifierInstance = createClassifierInstance(L4ClassifierDefinition.ID, sourcePortRange, destinationMiniRange);
+        assertEquals(SingleClassifierRule.updateOrderBasedOn(classifierInstance, allow, 0), 150);
+        classifierInstance = createClassifierInstance(L4ClassifierDefinition.ID, destinationPortRange, sourcePort);
+        assertEquals(SingleClassifierRule.updateOrderBasedOn(classifierInstance, allow, 0), 150);
+        classifierInstance = createClassifierInstance(L4ClassifierDefinition.ID, destinationPortRange, sourceMiniRange);
+        assertEquals(SingleClassifierRule.updateOrderBasedOn(classifierInstance, allow, 0), 150);
     }
 
     private ParameterValue createIntParameterValue(String paramName, Long value) {

@@ -10,6 +10,8 @@ package org.opendaylight.groupbasedpolicy.neutron.mapper.mapping.rule;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
+import com.google.common.collect.ImmutableList;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -50,7 +52,6 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.constants.rev150712
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.constants.rev150712.EthertypeBase;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.constants.rev150712.EthertypeV4;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.constants.rev150712.EthertypeV6;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.constants.rev150712.ProtocolBase;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.constants.rev150712.ProtocolIcmp;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.constants.rev150712.ProtocolIcmpV6;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.constants.rev150712.ProtocolTcp;
@@ -58,12 +59,10 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.constants.rev150712
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.secgroups.rev150712.SecurityRuleAttributes;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.secgroups.rev150712.security.rules.attributes.security.rules.SecurityRule;
 
-import com.google.common.collect.ImmutableList;
-
 public class SecRuleEntityDecoder {
 
     private SecRuleEntityDecoder() {
-        throw new UnsupportedOperationException("Cannot create an instace.");
+        throw new UnsupportedOperationException("Cannot create an instance.");
     }
 
     public static ContractId getContractId(SecurityRule secRule) {
@@ -82,7 +81,8 @@ public class SecRuleEntityDecoder {
                     .setIntValue(portMin.longValue())
                     .build());
             } else {
-                params.add(new ParameterValueBuilder().setName(new ParameterName(L4ClassifierDefinition.DST_PORT_RANGE_PARAM))
+                params.add(new ParameterValueBuilder()
+                    .setName(new ParameterName(L4ClassifierDefinition.DST_PORT_RANGE_PARAM))
                     .setRangeValue(
                             new RangeValueBuilder().setMin(portMin.longValue()).setMax(portMax.longValue()).build())
                     .build());
@@ -93,7 +93,8 @@ public class SecRuleEntityDecoder {
             if (classifierBuilder.getClassifierDefinitionId() == null) {
                 classifierBuilder.setClassifierDefinitionId(IpProtoClassifierDefinition.DEFINITION.getId());
             }
-            params.add(new ParameterValueBuilder().setName(new ParameterName(IpProtoClassifierDefinition.PROTO_PARAM))
+            params.add(new ParameterValueBuilder()
+                .setName(new ParameterName(IpProtoClassifierDefinition.PROTO_PARAM))
                 .setIntValue(protocol)
                 .build());
         }
@@ -102,7 +103,8 @@ public class SecRuleEntityDecoder {
             if (classifierBuilder.getClassifierDefinitionId() == null) {
                 classifierBuilder.setClassifierDefinitionId(EtherTypeClassifierDefinition.DEFINITION.getId());
             }
-            params.add(new ParameterValueBuilder().setName(new ParameterName(EtherTypeClassifierDefinition.ETHERTYPE_PARAM))
+            params.add(new ParameterValueBuilder()
+                .setName(new ParameterName(EtherTypeClassifierDefinition.ETHERTYPE_PARAM))
                 .setIntValue(ethertype)
                 .build());
         }
@@ -111,7 +113,7 @@ public class SecRuleEntityDecoder {
     }
 
     public static ActionRef createActionRefFromActionChoice(ActionChoice action) {
-        if(action instanceof SfcActionCase){
+        if (action instanceof SfcActionCase) {
             return MappingUtils.createSfcActionRef(((SfcActionCase) action).getSfcChainName());
         } else if (action instanceof AllowActionCase) {
             return MappingUtils.ACTION_REF_ALLOW;
@@ -131,7 +133,9 @@ public class SecRuleEntityDecoder {
     }
 
     /**
-     * @param secRule
+     * Resolves Direction for provided secRule.
+     *
+     * @param secRule rule for which Direction is resolved.
      * @return direction resolved from {@link SecurityRule#getDirection()}
      * @throws IllegalArgumentException if return value of
      *         {@link SecurityRule#getDirection()} is other than {@link DirectionIngress} or
@@ -153,6 +157,8 @@ public class SecRuleEntityDecoder {
     }
 
     /**
+     * Resolves Clause for provided secRule.
+     *
      * @param secRule {@link SecurityRule#getRemoteIpPrefix()} is used for EIC
      *        and subject selection
      * @return clause with the subject and with a consumer matcher containing EIC
@@ -160,8 +166,10 @@ public class SecRuleEntityDecoder {
     public static Clause getClause(SecurityRule secRule) {
         checkNotNull(secRule);
         SubjectName subjectName = SecRuleNameDecoder.getSubjectName(secRule);
-        ClauseBuilder clauseBuilder =
-                new ClauseBuilder().setSubjectRefs(ImmutableList.of(subjectName)).setName(SecRuleNameDecoder.getClauseName(secRule));
+        ClauseBuilder clauseBuilder = new ClauseBuilder()
+            .setSubjectRefs(ImmutableList.of(subjectName))
+            .setName(SecRuleNameDecoder
+                .getClauseName(secRule));
         IpPrefix remoteIpPrefix = secRule.getRemoteIpPrefix();
         if (remoteIpPrefix != null) {
             clauseBuilder.setConsumerMatchers(createConsumerMatchersWithEic(remoteIpPrefix));
@@ -192,10 +200,12 @@ public class SecRuleEntityDecoder {
     }
 
     private static <T> boolean twoIsNullOrEqualsOne(T one, T two) {
-        if (two == null)
+        if (two == null) {
             return true;
-        if (two.equals(one))
+        }
+        if (two.equals(one)) {
             return true;
+        }
         return false;
     }
 
@@ -215,7 +225,9 @@ public class SecRuleEntityDecoder {
     }
 
     /**
-     * @param secRule
+     * Resolves EtherType for provided secRule.
+     *
+     * @param secRule rule for which EtherType is resolved.
      * @return {@code null} if {@link SecurityRule#getEthertype()} is null; Otherwise ethertype
      *         number
      * @throws IllegalArgumentException if return value of
@@ -237,7 +249,9 @@ public class SecRuleEntityDecoder {
     }
 
     /**
-     * @param secRule
+     * Resolves Protocol for provided secRule.
+     *
+     * @param secRule rule for which Protocol is resolved.
      * @return {@code null} if {@link SecurityRule#getProtocol()} is null; Otherwise protocol number
      * @throws IllegalArgumentException if return value of
      *         {@link SecurityRule#getProtocol()} is other than {@link ProtocolTcp},

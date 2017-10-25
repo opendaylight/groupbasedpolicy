@@ -12,6 +12,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import com.google.common.base.Optional;
+
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
@@ -61,17 +62,17 @@ public class NeutronMapperAssert {
         assertTrue(opt.isPresent());
     }
 
+    public static void assertNetworkDomainExists(DataBroker dataBroker, Uuid tenantUuid, Subnet subnet,
+        Neutron neutron, IpAddress ipAddress) {
+        Optional<NetworkDomain> opt = getNetworkDomainOptional(dataBroker, tenantUuid, neutron, ipAddress, subnet);
+        assertTrue(opt.isPresent());
+    }
+
     public static void assertNetworkDomainNotExists(DataBroker dataBroker, Port port, Subnet subnet,
             Neutron neutron, IpAddress ipAddress) {
         Optional<NetworkDomain> opt =
                 getNetworkDomainOptional(dataBroker, port.getTenantId(), neutron, ipAddress, subnet);
         assertFalse(opt.isPresent());
-    }
-
-    public static void assertNetworkDomainExists(DataBroker dataBroker, Uuid tenantUuid, Subnet subnet,
-            Neutron neutron, IpAddress ipAddress) {
-        Optional<NetworkDomain> opt = getNetworkDomainOptional(dataBroker, tenantUuid, neutron, ipAddress, subnet);
-        assertTrue(opt.isPresent());
     }
 
     public static void assertNetworkDomainNotExists(DataBroker dataBroker, Uuid tenantUuid, Subnet subnet,

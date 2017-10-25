@@ -12,16 +12,15 @@ import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import org.apache.commons.lang3.StringUtils;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
-import org.opendaylight.groupbasedpolicy.neutron.mapper.test.NeutronMapperDataBrokerTest;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.EndpointRegistrator;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.mapping.rule.NeutronSecurityRuleAware;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.test.NeutronEntityFactory;
+import org.opendaylight.groupbasedpolicy.neutron.mapper.test.NeutronMapperDataBrokerTest;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.test.PolicyAssert;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.util.MappingUtils;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.yang.types.rev130715.Uuid;
@@ -44,6 +43,8 @@ public class NeutronSecurityGroupAwareDataStoreTest extends NeutronMapperDataBro
     private EndpointRegistrator epRegistrator;
 
     @Before
+    @SuppressWarnings("checkstyle:LineLength") // Longer lines in this method are caused by long package names,
+                                               // this will be removed when deprecated classes will be cleared.
     public void init() {
         dataBroker = getDataBroker();
 
@@ -136,7 +137,6 @@ public class NeutronSecurityGroupAwareDataStoreTest extends NeutronMapperDataBro
     @Test
     public void testAddNeutronSecurityGroup_incorrectNameDescription() throws Exception {
         String uuid = "dddddddd-dddd-dddd-dddd-dddddddddddd";
-        String longDescription = StringUtils.repeat("a", 4100);
         SecurityGroup secGroupA = new SecurityGroupBuilder().setUuid(new Uuid(uuid))
             .setTenantId(new Uuid(tenantId))
             .setName("123")

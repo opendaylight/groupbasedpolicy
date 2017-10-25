@@ -7,6 +7,12 @@
  */
 package org.opendaylight.groupbasedpolicy.neutron.mapper;
 
+import com.google.common.base.Function;
+import com.google.common.base.Predicate;
+import com.google.common.collect.FluentIterable;
+import com.google.common.collect.Iterators;
+import com.google.common.collect.PeekingIterator;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -60,37 +66,31 @@ import org.opendaylight.yangtools.yang.binding.DataObject;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier.PathArgument;
 
-import com.google.common.base.Function;
-import com.google.common.base.Predicate;
-import com.google.common.collect.FluentIterable;
-import com.google.common.collect.Iterators;
-import com.google.common.collect.PeekingIterator;
-
 public class NeutronMapper implements ClusteredDataTreeChangeListener<Neutron>, AutoCloseable {
 
-    private static final String EXC_MSG_UNKNOWN_MODIFICATION_TYPE_WITHIN_DATA = "Unknown modification type within data ";
+    private static final String EXC_MSG_UNKNOWN_MODIFICATION_TYPE_IN_DATA = "Unknown modification type within data ";
 
-    private final static SecurityRuleBuilder EIG_INGRESS_IPV4_SEC_RULE_BUILDER = new SecurityRuleBuilder()
+    private static final SecurityRuleBuilder EIG_INGRESS_IPV4_SEC_RULE_BUILDER = new SecurityRuleBuilder()
         .setUuid(new Uuid("0a629f80-2408-11e6-b67b-9e71128cae77"))
         .setDirection(DirectionIngress.class)
         .setEthertype(EthertypeV4.class)
         .setSecurityGroupId(MappingUtils.EIG_UUID);
-    private final static SecurityRuleBuilder EIG_EGRESS_IPV4_SEC_RULE_BUILDER = new SecurityRuleBuilder()
+    private static final SecurityRuleBuilder EIG_EGRESS_IPV4_SEC_RULE_BUILDER = new SecurityRuleBuilder()
         .setUuid(new Uuid("0f1789be-2408-11e6-b67b-9e71128cae77"))
         .setDirection(DirectionEgress.class)
         .setEthertype(EthertypeV4.class)
         .setSecurityGroupId(MappingUtils.EIG_UUID);
-    private final static SecurityRuleBuilder EIG_INGRESS_IPV6_SEC_RULE_BUILDER = new SecurityRuleBuilder()
+    private static final SecurityRuleBuilder EIG_INGRESS_IPV6_SEC_RULE_BUILDER = new SecurityRuleBuilder()
         .setUuid(new Uuid("139b7f90-2408-11e6-b67b-9e71128cae77"))
         .setDirection(DirectionIngress.class)
         .setEthertype(EthertypeV6.class)
         .setSecurityGroupId(MappingUtils.EIG_UUID);
-    private final static SecurityRuleBuilder EIG_EGRESS_IPV6_SEC_RULE_BUILDER = new SecurityRuleBuilder()
+    private static final SecurityRuleBuilder EIG_EGRESS_IPV6_SEC_RULE_BUILDER = new SecurityRuleBuilder()
         .setUuid(new Uuid("17517202-2408-11e6-b67b-9e71128cae77"))
         .setDirection(DirectionEgress.class)
         .setEthertype(EthertypeV6.class)
         .setSecurityGroupId(MappingUtils.EIG_UUID);
-    private final static SecurityGroupBuilder EIG_SEC_GROUP_BUILDER =
+    private static final SecurityGroupBuilder EIG_SEC_GROUP_BUILDER =
             new SecurityGroupBuilder().setUuid(MappingUtils.EIG_UUID);
 
     private final NeutronNetworkAware networkAware;
@@ -148,16 +148,20 @@ public class NeutronMapper implements ClusteredDataTreeChangeListener<Neutron>, 
                     findModifiedData(NeutronSecurityRuleAware.SECURITY_RULE_WILDCARD_IID, neutronModif);
             onDataObjectModification(secRuleModifs, securityRuleAware);
             // subnet
-            List<DataObjectModification<Subnet>> subnetModifs = findModifiedData(NeutronSubnetAware.SUBNET_WILDCARD_IID, neutronModif);
+            List<DataObjectModification<Subnet>> subnetModifs =
+                findModifiedData(NeutronSubnetAware.SUBNET_WILDCARD_IID, neutronModif);
             onDataObjectModification(subnetModifs, subnetAware);
             // port
-            List<DataObjectModification<Port>> portModifs = findModifiedData(NeutronPortAware.PORT_WILDCARD_IID, neutronModif);
+            List<DataObjectModification<Port>> portModifs =
+                findModifiedData(NeutronPortAware.PORT_WILDCARD_IID, neutronModif);
             onDataObjectModification(portModifs, portAware);
             // router
-            List<DataObjectModification<Router>> routerModifs = findModifiedData(NeutronRouterAware.ROUTER_WILDCARD_IID, neutronModif);
+            List<DataObjectModification<Router>> routerModifs =
+                findModifiedData(NeutronRouterAware.ROUTER_WILDCARD_IID, neutronModif);
             onDataObjectModification(routerModifs, routerAware);
             // floating IP
-            List<DataObjectModification<Floatingip>> floatingIpModifs = findModifiedData(NeutronFloatingIpAware.FLOATING_IP_WILDCARD_IID, neutronModif);
+            List<DataObjectModification<Floatingip>> floatingIpModifs =
+                findModifiedData(NeutronFloatingIpAware.FLOATING_IP_WILDCARD_IID, neutronModif);
             onDataObjectModification(floatingIpModifs, floatingIpAware);
         }
     }
@@ -169,15 +173,12 @@ public class NeutronMapper implements ClusteredDataTreeChangeListener<Neutron>, 
             final T dataAfter = dataModif.getDataAfter();
             if (dataBefore == null && dataAfter != null) {
                 neutronAware.onCreated(dataAfter, neutronAfter);
-            }
-            else if (dataBefore != null && dataAfter != null) {
+            } else if (dataBefore != null && dataAfter != null) {
                 neutronAware.onUpdated(dataBefore, dataAfter, neutronBefore, neutronAfter);
-            }
-            else if (dataBefore != null) {
+            } else if (dataBefore != null) {
                 neutronAware.onDeleted(dataBefore, neutronBefore, neutronAfter);
-            }
-            else {
-                throw new IllegalStateException(EXC_MSG_UNKNOWN_MODIFICATION_TYPE_WITHIN_DATA + dataModif);
+            } else {
+                throw new IllegalStateException(EXC_MSG_UNKNOWN_MODIFICATION_TYPE_IN_DATA + dataModif);
             }
         }
     }
@@ -277,7 +278,7 @@ public class NeutronMapper implements ClusteredDataTreeChangeListener<Neutron>, 
     /**
      * Finds all modified subnodes of given type in {@link Neutron} node.
      *
-     * @param <T>
+     * @param <T> dataObject type
      * @param iid path to data in root node
      * @param rootNode modified data of {@link Neutron} node
      * @return {@link List} of modified subnodes

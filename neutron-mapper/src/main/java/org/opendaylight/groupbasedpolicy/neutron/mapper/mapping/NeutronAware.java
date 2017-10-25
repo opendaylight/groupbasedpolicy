@@ -14,7 +14,8 @@ import org.opendaylight.yangtools.yang.binding.DataObject;
 public interface NeutronAware<T extends DataObject> {
 
     void onCreated(T createdItem, Neutron neutron);
-    void onUpdated(T oldItem, T newItem, Neutron oldNeutron, Neutron newNeutron);
-    void onDeleted(T deletedItem, Neutron oldNeutron, Neutron newNeutron);
 
+    void onUpdated(T oldItem, T newItem, Neutron oldNeutron, Neutron newNeutron);
+
+    void onDeleted(T deletedItem, Neutron oldNeutron, Neutron newNeutron);
 }

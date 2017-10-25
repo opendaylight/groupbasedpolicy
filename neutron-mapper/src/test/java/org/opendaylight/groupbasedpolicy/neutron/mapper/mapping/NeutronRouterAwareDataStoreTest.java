@@ -15,11 +15,12 @@ import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import com.google.common.base.Optional;
+import com.google.common.collect.ImmutableList;
+
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
-import com.google.common.base.Optional;
-import com.google.common.collect.ImmutableList;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -33,9 +34,7 @@ import org.opendaylight.groupbasedpolicy.neutron.mapper.util.Utils;
 import org.opendaylight.groupbasedpolicy.util.DataStoreHelper;
 import org.opendaylight.groupbasedpolicy.util.IidFactory;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.IpAddress;
-import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.IpPrefix;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.Ipv4Address;
-import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.Ipv4Prefix;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.yang.types.rev130715.Uuid;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.BaseEndpointService;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ContextId;
@@ -64,15 +63,14 @@ import org.opendaylight.yangtools.yang.common.RpcResult;
 
 public class NeutronRouterAwareDataStoreTest extends NeutronMapperDataBrokerTest {
 
-    private final Uuid tenantUuid = new Uuid("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
-    private final Uuid routerUuid = new Uuid("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
-    private final Uuid newRouterUuid = new Uuid("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbb2");
-    private final Uuid subnetUuid = new Uuid("cccccccc-cccc-cccc-cccc-cccccccccccc");
-    private final Uuid networkUuid = new Uuid("dddddddd-dddd-dddd-dddd-dddddddddddd");
-    private final Uuid gatewayPortUuid = new Uuid("dddddddd-dddd-dddd-dddd-ddddddddddd1");
-    private final IpAddress ipAddress = new IpAddress(new Ipv4Address("10.0.0.2"));
+    private static final Uuid TENANT_UUID = new Uuid("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+    private static final Uuid ROUTER_UUID = new Uuid("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
+    private static final Uuid NEW_ROUTER_UUID = new Uuid("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbb2");
+    private static final Uuid SUBNET_UUID = new Uuid("cccccccc-cccc-cccc-cccc-cccccccccccc");
+    private static final Uuid NETWORK_UUID = new Uuid("dddddddd-dddd-dddd-dddd-dddddddddddd");
+    private static final Uuid GATEWAY_PORT_UUID = new Uuid("dddddddd-dddd-dddd-dddd-ddddddddddd1");
+    private static final IpAddress IP_ADDRESS = new IpAddress(new Ipv4Address("10.0.0.2"));
     private static final long METADATA_IPV4_SERVER_PORT = 80;
-    private static final IpPrefix METADATA_IP_PREFIX = new IpPrefix(new Ipv4Prefix("169.254.169.254/32"));
 
     private DataBroker dataBroker;
     private NeutronRouterAware routerAware;
@@ -88,6 +86,8 @@ public class NeutronRouterAwareDataStoreTest extends NeutronMapperDataBrokerTest
     private Network network;
 
     @Before
+    @SuppressWarnings("checkstyle:LineLength") // Longer lines in this method are caused by long package names,
+                                               // this will be removed when deprecated classes will be cleared.
     public void init() throws ExecutionException, InterruptedException {
         futureRpcResult = mock(Future.class);
         futureRpcFail = mock(Future.class);
@@ -113,7 +113,7 @@ public class NeutronRouterAwareDataStoreTest extends NeutronMapperDataBrokerTest
         epRegistrator = new EndpointRegistrator(epService, baseEpService);
 
         networkAware = new NeutronNetworkAware(dataBroker, METADATA_IPV4_SERVER_PORT);
-        network = new NetworkBuilder().setTenantId(tenantUuid).setUuid(networkUuid).setName("networkName").build();
+        network = new NetworkBuilder().setTenantId(TENANT_UUID).setUuid(NETWORK_UUID).setName("networkName").build();
 
         routerAware = new NeutronRouterAware(dataBroker, epRegistrator);
     }
@@ -129,7 +129,7 @@ public class NeutronRouterAwareDataStoreTest extends NeutronMapperDataBrokerTest
 
     @Test
     public void testOnCreated() {
-        Router router = new RouterBuilder().setTenantId(tenantUuid).setName("routerName").setUuid(routerUuid).build();
+        Router router = new RouterBuilder().setTenantId(TENANT_UUID).setName("routerName").setUuid(ROUTER_UUID).build();
 
         routerAware.onCreated(router, neutron);
 
@@ -138,7 +138,7 @@ public class NeutronRouterAwareDataStoreTest extends NeutronMapperDataBrokerTest
 
     @Test
     public void testOnCreated_incorrectName() {
-        Router router = new RouterBuilder().setTenantId(tenantUuid).setName("123").setUuid(routerUuid).build();
+        Router router = new RouterBuilder().setTenantId(TENANT_UUID).setName("123").setUuid(ROUTER_UUID).build();
 
         routerAware.onCreated(router, neutron);
 
@@ -151,18 +151,13 @@ public class NeutronRouterAwareDataStoreTest extends NeutronMapperDataBrokerTest
         when(neutron.getSubnets()).thenReturn(subnets);
         when(neutron.getNetworks()).thenReturn(new NetworksBuilder().setNetwork(ImmutableList.of(network)).build());
 
-        FixedIps fixedIps = new FixedIpsBuilder().setIpAddress(ipAddress).setSubnetId(subnetUuid).build();
-        Port port = new PortBuilder().setUuid(gatewayPortUuid).setFixedIps(ImmutableList.of(fixedIps)).build();
+        FixedIps fixedIps = new FixedIpsBuilder().setIpAddress(IP_ADDRESS).setSubnetId(SUBNET_UUID).build();
+        Port port = new PortBuilder().setUuid(GATEWAY_PORT_UUID).setFixedIps(ImmutableList.of(fixedIps)).build();
         Ports ports = new PortsBuilder().setPort(ImmutableList.of(port)).build();
         when(neutron.getPorts()).thenReturn(ports);
 
         Router oldRouter =
-                new RouterBuilder().setTenantId(tenantUuid).setName("oldRouterName").setUuid(routerUuid).build();
-        Router newRouter = new RouterBuilder().setTenantId(tenantUuid)
-            .setName("newRouterName")
-            .setUuid(newRouterUuid)
-            .setGatewayPortId(gatewayPortUuid)
-            .build();
+                new RouterBuilder().setTenantId(TENANT_UUID).setName("oldRouterName").setUuid(ROUTER_UUID).build();
 
         networkAware.onCreated(network, neutron);
 
@@ -171,6 +166,13 @@ public class NeutronRouterAwareDataStoreTest extends NeutronMapperDataBrokerTest
         routerAware.onCreated(oldRouter, neutron);
 
         assertRouterExists(oldRouter);
+
+        Router newRouter = new RouterBuilder().setTenantId(TENANT_UUID)
+            .setName("newRouterName")
+            .setUuid(NEW_ROUTER_UUID)
+            .setGatewayPortId(GATEWAY_PORT_UUID)
+            .build();
+
         assertRouterNotExists(newRouter);
 
         routerAware.onUpdated(oldRouter, newRouter, neutron, neutron);
@@ -184,7 +186,7 @@ public class NeutronRouterAwareDataStoreTest extends NeutronMapperDataBrokerTest
         Subnets subnets = createSubnets();
         when(neutron.getSubnets()).thenReturn(subnets);
 
-        FixedIps fixedIps = new FixedIpsBuilder().setIpAddress(ipAddress).setSubnetId(subnetUuid).build();
+        FixedIps fixedIps = new FixedIpsBuilder().setIpAddress(IP_ADDRESS).setSubnetId(SUBNET_UUID).build();
         Port port = new PortBuilder().setUuid(new Uuid("dddddddd-dddd-dddd-dddd-000000000000"))
             .setFixedIps(ImmutableList.of(fixedIps))
             .build();
@@ -192,11 +194,11 @@ public class NeutronRouterAwareDataStoreTest extends NeutronMapperDataBrokerTest
         when(neutron.getPorts()).thenReturn(ports);
 
         Router oldRouter =
-                new RouterBuilder().setTenantId(tenantUuid).setName("oldRouterName").setUuid(routerUuid).build();
-        Router newRouter = new RouterBuilder().setTenantId(tenantUuid)
+                new RouterBuilder().setTenantId(TENANT_UUID).setName("oldRouterName").setUuid(ROUTER_UUID).build();
+        Router newRouter = new RouterBuilder().setTenantId(TENANT_UUID)
             .setName("newRouterName")
-            .setUuid(newRouterUuid)
-            .setGatewayPortId(gatewayPortUuid)
+            .setUuid(NEW_ROUTER_UUID)
+            .setGatewayPortId(GATEWAY_PORT_UUID)
             .build();
 
         routerAware.onCreated(oldRouter, neutron);
@@ -210,16 +212,16 @@ public class NeutronRouterAwareDataStoreTest extends NeutronMapperDataBrokerTest
         Subnets subnets = createSubnets();
         when(neutron.getSubnets()).thenReturn(subnets);
 
-        Port port = new PortBuilder().setUuid(gatewayPortUuid).build();
+        Port port = new PortBuilder().setUuid(GATEWAY_PORT_UUID).build();
         Ports ports = new PortsBuilder().setPort(ImmutableList.of(port)).build();
         when(neutron.getPorts()).thenReturn(ports);
 
         Router oldRouter =
-                new RouterBuilder().setTenantId(tenantUuid).setName("oldRouterName").setUuid(routerUuid).build();
-        Router newRouter = new RouterBuilder().setTenantId(tenantUuid)
+                new RouterBuilder().setTenantId(TENANT_UUID).setName("oldRouterName").setUuid(ROUTER_UUID).build();
+        Router newRouter = new RouterBuilder().setTenantId(TENANT_UUID)
             .setName("newRouterName")
-            .setUuid(newRouterUuid)
-            .setGatewayPortId(gatewayPortUuid)
+            .setUuid(NEW_ROUTER_UUID)
+            .setGatewayPortId(GATEWAY_PORT_UUID)
             .build();
 
         routerAware.onCreated(oldRouter, neutron);
@@ -233,17 +235,17 @@ public class NeutronRouterAwareDataStoreTest extends NeutronMapperDataBrokerTest
         Subnets subnets = createSubnets();
         when(neutron.getSubnets()).thenReturn(subnets);
 
-        FixedIps fixedIps = new FixedIpsBuilder().setIpAddress(ipAddress).build();
-        Port port = new PortBuilder().setUuid(gatewayPortUuid).setFixedIps(ImmutableList.of(fixedIps)).build();
+        FixedIps fixedIps = new FixedIpsBuilder().setIpAddress(IP_ADDRESS).build();
+        Port port = new PortBuilder().setUuid(GATEWAY_PORT_UUID).setFixedIps(ImmutableList.of(fixedIps)).build();
         Ports ports = new PortsBuilder().setPort(ImmutableList.of(port)).build();
         when(neutron.getPorts()).thenReturn(ports);
 
         Router oldRouter =
-                new RouterBuilder().setTenantId(tenantUuid).setName("oldRouterName").setUuid(routerUuid).build();
-        Router newRouter = new RouterBuilder().setTenantId(tenantUuid)
+                new RouterBuilder().setTenantId(TENANT_UUID).setName("oldRouterName").setUuid(ROUTER_UUID).build();
+        Router newRouter = new RouterBuilder().setTenantId(TENANT_UUID)
             .setName("newRouterName")
-            .setUuid(newRouterUuid)
-            .setGatewayPortId(gatewayPortUuid)
+            .setUuid(NEW_ROUTER_UUID)
+            .setGatewayPortId(GATEWAY_PORT_UUID)
             .build();
 
         routerAware.onCreated(oldRouter, neutron);
@@ -253,6 +255,8 @@ public class NeutronRouterAwareDataStoreTest extends NeutronMapperDataBrokerTest
     }
 
     @Test
+    @SuppressWarnings("checkstyle:LineLength") // Longer lines in this method are caused by long package names,
+                                               // this will be removed when deprecated classes will be cleared.
     public void testOnUpdated_ExtGatewayNotRegistered() {
         when(baseEpService.registerEndpoint(
                 any(org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.RegisterEndpointInput.class)))
@@ -261,17 +265,17 @@ public class NeutronRouterAwareDataStoreTest extends NeutronMapperDataBrokerTest
         Subnets subnets = createSubnets();
         when(neutron.getSubnets()).thenReturn(subnets);
 
-        FixedIps fixedIps = new FixedIpsBuilder().setIpAddress(ipAddress).setSubnetId(subnetUuid).build();
-        Port port = new PortBuilder().setUuid(gatewayPortUuid).setFixedIps(ImmutableList.of(fixedIps)).build();
+        FixedIps fixedIps = new FixedIpsBuilder().setIpAddress(IP_ADDRESS).setSubnetId(SUBNET_UUID).build();
+        Port port = new PortBuilder().setUuid(GATEWAY_PORT_UUID).setFixedIps(ImmutableList.of(fixedIps)).build();
         Ports ports = new PortsBuilder().setPort(ImmutableList.of(port)).build();
         when(neutron.getPorts()).thenReturn(ports);
 
         Router oldRouter =
-                new RouterBuilder().setTenantId(tenantUuid).setName("oldRouterName").setUuid(routerUuid).build();
-        Router newRouter = new RouterBuilder().setTenantId(tenantUuid)
+                new RouterBuilder().setTenantId(TENANT_UUID).setName("oldRouterName").setUuid(ROUTER_UUID).build();
+        Router newRouter = new RouterBuilder().setTenantId(TENANT_UUID)
             .setName("newRouterName")
-            .setUuid(newRouterUuid)
-            .setGatewayPortId(gatewayPortUuid)
+            .setUuid(NEW_ROUTER_UUID)
+            .setGatewayPortId(GATEWAY_PORT_UUID)
             .build();
 
         routerAware.onCreated(oldRouter, neutron);
@@ -286,17 +290,17 @@ public class NeutronRouterAwareDataStoreTest extends NeutronMapperDataBrokerTest
         when(neutron.getSubnets()).thenReturn(subnets);
         when(neutron.getNetworks()).thenReturn(new NetworksBuilder().setNetwork(ImmutableList.of(network)).build());
 
-        FixedIps fixedIps = new FixedIpsBuilder().setIpAddress(ipAddress).setSubnetId(subnetUuid).build();
-        Port port = new PortBuilder().setUuid(gatewayPortUuid).setFixedIps(ImmutableList.of(fixedIps)).build();
+        FixedIps fixedIps = new FixedIpsBuilder().setIpAddress(IP_ADDRESS).setSubnetId(SUBNET_UUID).build();
+        Port port = new PortBuilder().setUuid(GATEWAY_PORT_UUID).setFixedIps(ImmutableList.of(fixedIps)).build();
         Ports ports = new PortsBuilder().setPort(ImmutableList.of(port)).build();
         when(neutron.getPorts()).thenReturn(ports);
 
         Router oldRouter =
-                new RouterBuilder().setTenantId(tenantUuid).setName("oldRouterName").setUuid(routerUuid).build();
-        Router newRouter = new RouterBuilder().setTenantId(tenantUuid)
+                new RouterBuilder().setTenantId(TENANT_UUID).setName("oldRouterName").setUuid(ROUTER_UUID).build();
+        Router newRouter = new RouterBuilder().setTenantId(TENANT_UUID)
             .setName("newRouterName")
-            .setUuid(newRouterUuid)
-            .setGatewayPortId(gatewayPortUuid)
+            .setUuid(NEW_ROUTER_UUID)
+            .setGatewayPortId(GATEWAY_PORT_UUID)
             .build();
 
         routerAware.onCreated(oldRouter, neutron);
@@ -308,7 +312,7 @@ public class NeutronRouterAwareDataStoreTest extends NeutronMapperDataBrokerTest
     @Test
     public void testOnDeleted() {
         Router router =
-                new RouterBuilder().setTenantId(tenantUuid).setName("oldRouterName").setUuid(routerUuid).build();
+                new RouterBuilder().setTenantId(TENANT_UUID).setName("oldRouterName").setUuid(ROUTER_UUID).build();
 
         routerAware.onCreated(router, neutron);
         routerAware.onDeleted(router, neutron, neutron);
@@ -316,11 +320,11 @@ public class NeutronRouterAwareDataStoreTest extends NeutronMapperDataBrokerTest
     }
 
     private Subnets createSubnets() {
-        Subnet subnet = new SubnetBuilder().setTenantId(tenantUuid)
-            .setUuid(subnetUuid)
+        Subnet subnet = new SubnetBuilder().setTenantId(TENANT_UUID)
+            .setUuid(SUBNET_UUID)
             .setName("subnetName")
-            .setNetworkId(networkUuid)
-            .setGatewayIp(ipAddress)
+            .setNetworkId(NETWORK_UUID)
+            .setGatewayIp(IP_ADDRESS)
             .setCidr(Utils.createIpPrefix("10.0.0.0/24"))
             .build();
         return new SubnetsBuilder().setSubnet(ImmutableList.of(subnet)).build();
@@ -343,12 +347,12 @@ public class NeutronRouterAwareDataStoreTest extends NeutronMapperDataBrokerTest
     }
 
     private Optional<L3Context> getL3ContextOptional(Router router) {
-        ReadOnlyTransaction rTx = dataBroker.newReadOnlyTransaction();
+        ReadOnlyTransaction readTx = dataBroker.newReadOnlyTransaction();
         TenantId tenantId = new TenantId(router.getTenantId().getValue());
         ContextId routerL3CtxId = new ContextId(router.getUuid().getValue());
         L3ContextId l3ContextId = new L3ContextId(routerL3CtxId);
         InstanceIdentifier<L3Context> l3ContextIid = IidFactory.l3ContextIid(tenantId, l3ContextId);
-        return DataStoreHelper.readFromDs(LogicalDatastoreType.CONFIGURATION, l3ContextIid, rTx);
+        return DataStoreHelper.readFromDs(LogicalDatastoreType.CONFIGURATION, l3ContextIid, readTx);
     }
 
 }

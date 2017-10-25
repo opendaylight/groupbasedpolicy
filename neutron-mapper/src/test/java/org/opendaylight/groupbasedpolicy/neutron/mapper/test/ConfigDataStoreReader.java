@@ -7,6 +7,8 @@
  */
 package org.opendaylight.groupbasedpolicy.neutron.mapper.test;
 
+import com.google.common.base.Optional;
+
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
@@ -27,8 +29,6 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.subject.feature.instances.ActionInstance;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.subject.feature.instances.ClassifierInstance;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
-
-import com.google.common.base.Optional;
 
 public final class ConfigDataStoreReader {
 
@@ -76,8 +76,8 @@ public final class ConfigDataStoreReader {
         }
     }
 
-    public static Optional<ConsumerNamedSelector> readConsumerNamedSelector(DataBroker dataBroker, String tenantId, String egId,
-                                                                            String selectorName) {
+    public static Optional<ConsumerNamedSelector> readConsumerNamedSelector(DataBroker dataBroker, String tenantId,
+        String egId, String selectorName) {
         InstanceIdentifier<ConsumerNamedSelector> cnsIid = IidFactory.consumerNamedSelectorIid(new TenantId(tenantId),
                 new EndpointGroupId(egId), new SelectorName(selectorName));
         try (ReadOnlyTransaction rTx = dataBroker.newReadOnlyTransaction()) {
@@ -85,7 +85,8 @@ public final class ConfigDataStoreReader {
         }
     }
 
-    public static Optional<Clause> readClause(DataBroker dataBroker, String tenantId, String contractId, String clauseName) {
+    public static Optional<Clause> readClause(DataBroker dataBroker, String tenantId, String contractId,
+        String clauseName) {
         InstanceIdentifier<Clause> clauseIid = IidFactory.clauseIid(new TenantId(tenantId), new ContractId(contractId),
                 new ClauseName(clauseName));
         try (ReadOnlyTransaction rTx = dataBroker.newReadOnlyTransaction()) {

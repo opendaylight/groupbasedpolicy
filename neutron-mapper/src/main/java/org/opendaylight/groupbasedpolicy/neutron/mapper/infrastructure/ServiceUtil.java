@@ -8,6 +8,8 @@
 
 package org.opendaylight.groupbasedpolicy.neutron.mapper.infrastructure;
 
+import com.google.common.collect.ImmutableList;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -41,8 +43,8 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.subject.feature.instance.ParameterValueBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.Contract;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.ContractBuilder;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.EndpointGroupBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.EndpointGroup.IntraGroupPolicy;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.EndpointGroupBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.contract.Clause;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.contract.ClauseBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.contract.Subject;
@@ -59,8 +61,6 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.subject.feature.instances.ClassifierInstance;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.subject.feature.instances.ClassifierInstanceBuilder;
 
-import com.google.common.collect.ImmutableList;
-
 public class ServiceUtil {
 
     protected static Contract createContract(ContractId cid, List<Subject> subjects, Description description) {
@@ -68,7 +68,7 @@ public class ServiceUtil {
     }
 
     protected static ClassifierInstance createClassifInstance(ClassifierName name, ClassifierDefinitionId id,
-            List<ParameterValue> pv) {
+        List<ParameterValue> pv) {
         return new ClassifierInstanceBuilder().setName(name)
             .setClassifierDefinitionId(id)
             .setParameterValue(pv)
@@ -83,7 +83,7 @@ public class ServiceUtil {
     }
 
     protected static List<ParameterValue> createParams(long etherType, long proto, @Nullable Long srcPort,
-            @Nullable Long dstPort) {
+        @Nullable Long dstPort) {
         List<ParameterValue> params = new ArrayList<>();
         if (srcPort != null) {
             params.add(new ParameterValueBuilder().setName(new ParameterName(L4ClassifierDefinition.SRC_PORT_PARAM))
@@ -105,62 +105,54 @@ public class ServiceUtil {
     }
 
     protected static Clause createClauseWithConsProvEic(@Nullable IpPrefix ipPrefix, SubjectName subjectName) {
-         ConsumerMatchers consumerMatchers = null;
-         ProviderMatchers providerMatchers = null;
-         StringBuilder clauseName = new StringBuilder();
-         clauseName.append(subjectName.getValue());
-         if (ipPrefix != null) {
-             clauseName.append(MappingUtils.NAME_DOUBLE_DELIMETER).append(Utils.getStringIpPrefix(ipPrefix));
-             consumerMatchers =
-                     new ConsumerMatchersBuilder()
-                         .setEndpointIdentificationConstraints(new EndpointIdentificationConstraintsBuilder()
-                             .setL3EndpointIdentificationConstraints(new L3EndpointIdentificationConstraintsBuilder()
-                                 .setPrefixConstraint(
-                                         ImmutableList.of(new PrefixConstraintBuilder().setIpPrefix(ipPrefix).build()))
-                                 .build())
-                             .build())
-                         .build();
-             providerMatchers =
-                     new ProviderMatchersBuilder()
-                         .setEndpointIdentificationConstraints(new EndpointIdentificationConstraintsBuilder()
-                             .setL3EndpointIdentificationConstraints(new L3EndpointIdentificationConstraintsBuilder()
-                                 .setPrefixConstraint(
-                                         ImmutableList.of(new PrefixConstraintBuilder().setIpPrefix(ipPrefix).build()))
-                                 .build())
-                             .build())
-                         .build();
-         }
-         return new ClauseBuilder().setName(new ClauseName(clauseName.toString()))
-             .setSubjectRefs(ImmutableList.of(subjectName))
-             .setConsumerMatchers(consumerMatchers)
-             .setProviderMatchers(providerMatchers)
-             .build();
-     }
+        ConsumerMatchers consumerMatchers = null;
+        ProviderMatchers providerMatchers = null;
+        StringBuilder clauseName = new StringBuilder();
+        clauseName.append(subjectName.getValue());
+        if (ipPrefix != null) {
+            clauseName.append(MappingUtils.NAME_DOUBLE_DELIMETER).append(Utils.getStringIpPrefix(ipPrefix));
+            consumerMatchers =
+                new ConsumerMatchersBuilder().setEndpointIdentificationConstraints(
+                    new EndpointIdentificationConstraintsBuilder().setL3EndpointIdentificationConstraints(
+                        new L3EndpointIdentificationConstraintsBuilder().setPrefixConstraint(
+                            ImmutableList.of(new PrefixConstraintBuilder().setIpPrefix(ipPrefix).build())).build())
+                        .build()).build();
+            providerMatchers =
+                new ProviderMatchersBuilder().setEndpointIdentificationConstraints(
+                    new EndpointIdentificationConstraintsBuilder().setL3EndpointIdentificationConstraints(
+                        new L3EndpointIdentificationConstraintsBuilder().setPrefixConstraint(
+                            ImmutableList.of(new PrefixConstraintBuilder().setIpPrefix(ipPrefix).build())).build())
+                        .build()).build();
+        }
+        return new ClauseBuilder().setName(new ClauseName(clauseName.toString()))
+            .setSubjectRefs(ImmutableList.of(subjectName))
+            .setConsumerMatchers(consumerMatchers)
+            .setProviderMatchers(providerMatchers)
+            .build();
+    }
 
     protected static Rule createRuleAllow(ClassifierName classifierName, Direction direction) {
-         ClassifierName name =
-                 new ClassifierName(direction.name() + MappingUtils.NAME_DOUBLE_DELIMETER + classifierName.getValue());
-         ClassifierRef classifierRef = new ClassifierRefBuilder().setName(name)
-             .setInstanceName(classifierName)
-             .setDirection(direction)
-             .build();
-         return new RuleBuilder().setName(new RuleName(name))
-             .setActionRef(ImmutableList.<ActionRef>of(MappingUtils.ACTION_REF_ALLOW))
-             .setClassifierRef(ImmutableList.of(classifierRef))
-             .build();
-     }
+        ClassifierName name =
+            new ClassifierName(direction.name() + MappingUtils.NAME_DOUBLE_DELIMETER + classifierName.getValue());
+        ClassifierRef classifierRef =
+            new ClassifierRefBuilder().setName(name).setInstanceName(classifierName).setDirection(direction).build();
+        return new RuleBuilder().setName(new RuleName(name))
+            .setActionRef(ImmutableList.<ActionRef>of(MappingUtils.ACTION_REF_ALLOW))
+            .setClassifierRef(ImmutableList.of(classifierRef))
+            .build();
+    }
 
     protected static ProviderNamedSelector createProviderSelector(Contract contract) {
-         SelectorName selectorName = new SelectorName(contract.getSubject().get(0).getName().getValue());
-         return new ProviderNamedSelectorBuilder().setName(selectorName)
-             .setContract(ImmutableList.of(contract.getId()))
-             .build();
-     }
+        SelectorName selectorName = new SelectorName(contract.getSubject().get(0).getName().getValue());
+        return new ProviderNamedSelectorBuilder().setName(selectorName)
+            .setContract(ImmutableList.of(contract.getId()))
+            .build();
+    }
 
     protected static ConsumerNamedSelector createConsumerSelector(Contract contract) {
-         SelectorName selectorName = new SelectorName(contract.getSubject().get(0).getName().getValue());
-         return new ConsumerNamedSelectorBuilder().setName(selectorName)
-             .setContract(ImmutableList.of(contract.getId()))
-             .build();
-     }
+        SelectorName selectorName = new SelectorName(contract.getSubject().get(0).getName().getValue());
+        return new ConsumerNamedSelectorBuilder().setName(selectorName)
+            .setContract(ImmutableList.of(contract.getId()))
+            .build();
+    }
 }

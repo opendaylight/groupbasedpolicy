@@ -10,6 +10,14 @@ package org.opendaylight.groupbasedpolicy.neutron.mapper.mapping.rule;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Optional;
+import com.google.common.base.Preconditions;
+import com.google.common.collect.HashMultiset;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Multiset;
+import com.google.common.collect.Sets;
+
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -72,14 +80,6 @@ import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Optional;
-import com.google.common.base.Preconditions;
-import com.google.common.collect.HashMultiset;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Multiset;
-import com.google.common.collect.Sets;
-
 public class NeutronSecurityRuleAware implements NeutronAware<SecurityRule> {
 
     private static final Logger LOG = LoggerFactory.getLogger(NeutronSecurityRuleAware.class);
@@ -91,8 +91,8 @@ public class NeutronSecurityRuleAware implements NeutronAware<SecurityRule> {
     private final Multiset<InstanceIdentifier<ActionInstance>> createdActionInstances;
     private final Map<SecurityRuleKey, SecurityRule> pendingCreatedRules;
     private final Map<SecurityGroupKey, SecurityGroup> pendingDeletedGroups;
-    final static String PROVIDED_BY = "provided_by-";
-    final static String POSSIBLE_CONSUMER = "possible_consumer-";
+    private static final String PROVIDED_BY = "provided_by-";
+    private static final String POSSIBLE_CONSUMER = "possible_consumer-";
     private final EndpointRegistrator epRegistrator;
 
     public NeutronSecurityRuleAware(DataBroker dataProvider, EndpointRegistrator epRegistrator) {
@@ -175,9 +175,11 @@ public class NeutronSecurityRuleAware implements NeutronAware<SecurityRule> {
         Description contractDescription = createContractDescription(secRule, neutron);
         SingleRuleContract singleRuleContract = createSingleRuleContract(secRule, contractDescription, action, neutron);
         Contract contract = singleRuleContract.getContract();
-        rwTx.put(LogicalDatastoreType.CONFIGURATION, IidFactory.contractIid(tenantId, contract.getId()), contract, true);
+        rwTx.put(LogicalDatastoreType.CONFIGURATION, IidFactory.contractIid(tenantId, contract.getId()), contract,
+            true);
         SelectorName providerSelector = getSelectorNameWithConsumer(secRule, neutron);
-        writeProviderNamedSelectorToEpg(providerSelector, contract.getId(), new EpgKeyDto(providerEpgId, tenantId), rwTx);
+        writeProviderNamedSelectorToEpg(providerSelector, contract.getId(), new EpgKeyDto(providerEpgId, tenantId),
+            rwTx);
 
         if (secRule.getRemoteGroupId() != null) {
             Uuid consumerSecGroupId = secRule.getRemoteGroupId();
@@ -185,8 +187,10 @@ public class NeutronSecurityRuleAware implements NeutronAware<SecurityRule> {
             designContractsBetweenProviderAndConsumer(tenantId, consumerSecGroupId, providerSecGroupId, neutron, rwTx);
         } else {
             for (Uuid consumerSecGroupId : SecurityRuleUtils.findSecurityGroupsHavingSecurityRules(neutron)) {
-                designContractsBetweenProviderAndConsumer(tenantId, providerSecGroupId, consumerSecGroupId, neutron, rwTx);
-                designContractsBetweenProviderAndConsumer(tenantId, consumerSecGroupId, providerSecGroupId, neutron, rwTx);
+                designContractsBetweenProviderAndConsumer(tenantId, providerSecGroupId, consumerSecGroupId, neutron,
+                    rwTx);
+                designContractsBetweenProviderAndConsumer(tenantId, consumerSecGroupId, providerSecGroupId, neutron,
+                    rwTx);
             }
         }
 
@@ -220,16 +224,16 @@ public class NeutronSecurityRuleAware implements NeutronAware<SecurityRule> {
                     .filter(net -> NetworkUtils.isRouterExternal(net))
                     .findAny();
                 if (publicNet.isPresent()) {
-                    WriteTransaction wTx = dataProvider.newWriteOnlyTransaction();
-                    wTx.merge(LogicalDatastoreType.CONFIGURATION,
+                    WriteTransaction writeTx = dataProvider.newWriteOnlyTransaction();
+                    writeTx.merge(LogicalDatastoreType.CONFIGURATION,
                             IidFactory.externalImplicitGroupIid(new TenantId(secRule.getTenantId().getValue()),
                                     MappingUtils.EPG_EXTERNAL_ID),
                             new ExternalImplicitGroupBuilder().setId(MappingUtils.EPG_EXTERNAL_ID).build(), true);
-                    wTx.merge(LogicalDatastoreType.CONFIGURATION,
+                    writeTx.merge(LogicalDatastoreType.CONFIGURATION,
                             IidFactory.endpointGroupIid(new TenantId(secRule.getTenantId().getValue()),
                                     MappingUtils.EPG_EXTERNAL_ID),
                             new EndpointGroupBuilder().setId(MappingUtils.EPG_EXTERNAL_ID).build(), true);
-                    DataStoreHelper.submitToDs(wTx);
+                    DataStoreHelper.submitToDs(writeTx);
                     AddressEndpointRegBuilder addrEpbuilder = new AddressEndpointRegBuilder()
                         .setAddress(String.valueOf(secRule.getRemoteIpPrefix().getValue()))
                         .setAddressType(IpPrefixType.class)
@@ -271,8 +275,9 @@ public class NeutronSecurityRuleAware implements NeutronAware<SecurityRule> {
 
     @VisibleForTesting
     Set<SecurityRule> getProvidedSecRulesBetween(Uuid provSecGroup, Uuid consSecGroup, Neutron neutron) {
-        return Sets.union(SecurityRuleUtils.findSecurityRulesBySecGroupAndRemoteSecGroup(provSecGroup, consSecGroup, neutron),
-                SecurityRuleUtils.findSecurityRulesBySecGroupAndRemoteSecGroup(provSecGroup, null, neutron));
+        return Sets.union(
+            SecurityRuleUtils.findSecurityRulesBySecGroupAndRemoteSecGroup(provSecGroup, consSecGroup, neutron),
+            SecurityRuleUtils.findSecurityRulesBySecGroupAndRemoteSecGroup(provSecGroup, null, neutron));
     }
 
     @VisibleForTesting
@@ -289,7 +294,9 @@ public class NeutronSecurityRuleAware implements NeutronAware<SecurityRule> {
         return false;
     }
 
-    public boolean changeActionOfNeutronSecurityRule(SecurityRule secRule, ActionChoice action, Neutron neutron, ReadWriteTransaction rwTx) {
+    public boolean changeActionOfNeutronSecurityRule(SecurityRule secRule, ActionChoice action, Neutron neutron,
+        ReadWriteTransaction rwTx) {
+
         addSfcChainActionInstance(action, new TenantId(secRule.getTenantId().getValue()), rwTx);
         LOG.trace("Changing to action {} for secuirity group rule {}", action, secRule);
         return addNeutronSecurityRuleWithAction(secRule, neutron, action, rwTx);
@@ -313,32 +320,32 @@ public class NeutronSecurityRuleAware implements NeutronAware<SecurityRule> {
     }
 
     private void writeProviderNamedSelectorToEpg(SelectorName providerSelector, ContractId contractId, EpgKeyDto epgKey,
-            WriteTransaction wTx) {
+            WriteTransaction writeTx) {
         ProviderNamedSelector providerNamedSelector = new ProviderNamedSelectorBuilder().setName(providerSelector)
             .setContract(ImmutableList.of(contractId))
             .build();
-        wTx.put(LogicalDatastoreType.CONFIGURATION,
+        writeTx.put(LogicalDatastoreType.CONFIGURATION,
                 IidFactory.providerNamedSelectorIid(epgKey.getTenantId(), epgKey.getEpgId(),
                         providerNamedSelector.getName()), providerNamedSelector, true);
     }
 
     private void writeConsumerNamedSelectorToEpg(SelectorName consumerSelector, ContractId contractId, EpgKeyDto epgKey,
-            WriteTransaction wTx) {
+            WriteTransaction writeTx) {
         ConsumerNamedSelector consumerNamedSelector = new ConsumerNamedSelectorBuilder().setName(consumerSelector)
             .setContract(ImmutableList.of(contractId))
             .build();
-        wTx.put(LogicalDatastoreType.CONFIGURATION,
+        writeTx.put(LogicalDatastoreType.CONFIGURATION,
                 IidFactory.consumerNamedSelectorIid(epgKey.getTenantId(), epgKey.getEpgId(),
                         consumerNamedSelector.getName()), consumerNamedSelector, true);
     }
 
     @VisibleForTesting
     void createClassifierInstanceIfNotExists(TenantId tenantId, ClassifierInstance classifierInstance,
-            WriteTransaction wTx) {
+            WriteTransaction writeTx) {
         InstanceIdentifier<ClassifierInstance> classifierInstanceIid = IidFactory.classifierInstanceIid(tenantId,
                 classifierInstance.getName());
         if (!createdClassifierInstances.contains(classifierInstanceIid)) {
-            wTx.put(LogicalDatastoreType.CONFIGURATION, classifierInstanceIid, classifierInstance, true);
+            writeTx.put(LogicalDatastoreType.CONFIGURATION, classifierInstanceIid, classifierInstance, true);
         }
         createdClassifierInstances.add(classifierInstanceIid);
     }
@@ -408,12 +415,16 @@ public class NeutronSecurityRuleAware implements NeutronAware<SecurityRule> {
 
         if (secRule.getRemoteGroupId() != null) {
             Uuid consumerSecGroupId = secRule.getRemoteGroupId();
-            undesignContractsBetweenProviderAndConsumer(tenantId, providerSecGroupId, consumerSecGroupId, secRule, neutron, rwTx);
-            undesignContractsBetweenProviderAndConsumer(tenantId, consumerSecGroupId, providerSecGroupId, secRule, neutron, rwTx);
+            undesignContractsBetweenProviderAndConsumer(tenantId, providerSecGroupId, consumerSecGroupId, secRule,
+                neutron, rwTx);
+            undesignContractsBetweenProviderAndConsumer(tenantId, consumerSecGroupId, providerSecGroupId, secRule,
+                neutron, rwTx);
         } else {
             for (Uuid consumerSecGroupId : SecurityRuleUtils.findSecurityGroupsHavingSecurityRules(neutron)) {
-                undesignContractsBetweenProviderAndConsumer(tenantId, providerSecGroupId, consumerSecGroupId, secRule, neutron, rwTx);
-                undesignContractsBetweenProviderAndConsumer(tenantId, consumerSecGroupId, providerSecGroupId, secRule, neutron, rwTx);
+                undesignContractsBetweenProviderAndConsumer(tenantId, providerSecGroupId, consumerSecGroupId, secRule,
+                    neutron, rwTx);
+                undesignContractsBetweenProviderAndConsumer(tenantId, consumerSecGroupId, providerSecGroupId, secRule,
+                    neutron, rwTx);
             }
         }
 
@@ -432,7 +443,8 @@ public class NeutronSecurityRuleAware implements NeutronAware<SecurityRule> {
         Set<SecurityRule> consSecRules = getProvidedSecRulesBetween(consSecGroupId, provSecGroupId, neutron);
         EndpointGroupId consEpgId = new EndpointGroupId(consSecGroupId.getValue());
         for (SecurityRule provSecRule : provSecRules) {
-            if (isProvidersSecRuleSuitableForConsumersSecRulesAndGoodToRemove(provSecRule, consSecRules, removedSecRule)) {
+            if (isProvidersSecRuleSuitableForConsumersSecRulesAndGoodToRemove(provSecRule, consSecRules,
+                removedSecRule)) {
                 SelectorName consumerSelector = getSelectorNameWithProvider(provSecRule, neutron);
                 deleteConsumerNamedSelector(consumerSelector, new EpgKeyDto(consEpgId, tenantId), rwTx);
             }
@@ -552,17 +564,22 @@ public class NeutronSecurityRuleAware implements NeutronAware<SecurityRule> {
 
     @VisibleForTesting
     static boolean isOneWithinTwo(SecurityRule one, SecurityRule two) {
-        if (!isOneGroupIdWithinTwoRemoteGroupId(one, two) || !isOneGroupIdWithinTwoRemoteGroupId(two, one))
+        if (!isOneGroupIdWithinTwoRemoteGroupId(one, two) || !isOneGroupIdWithinTwoRemoteGroupId(two, one)) {
             return false;
-        if (!SecRuleEntityDecoder.isEtherTypeOfOneWithinTwo(one, two))
+        }
+        if (!SecRuleEntityDecoder.isEtherTypeOfOneWithinTwo(one, two)) {
             return false;
-        if (!SecRuleEntityDecoder.isProtocolOfOneWithinTwo(one, two))
+        }
+        if (!SecRuleEntityDecoder.isProtocolOfOneWithinTwo(one, two)) {
             return false;
-        if (!SecRuleEntityDecoder.isPortsOfOneWithinTwo(one, two))
+        }
+        if (!SecRuleEntityDecoder.isPortsOfOneWithinTwo(one, two)) {
             return false;
+        }
         if (two.getRemoteIpPrefix() != null
-                && one.getRemoteIpPrefix() == null)
+                && one.getRemoteIpPrefix() == null) {
             return false;
+        }
         return true;
     }
 

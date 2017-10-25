@@ -75,8 +75,8 @@ public class SecRuleNameDecoderTest {
             .append(EtherTypeClassifierDefinition.DEFINITION.getName().getValue())
             .append(MappingUtils.NAME_VALUE_DELIMETER)
             .append("%s");
-        String frmtClsfName = String.format(frmtBuilder.toString(), 8010, 8020, secRule.getProtocol().getIdentityref().getSimpleName(),
-                secRule.getEthertype().getSimpleName());
+        String frmtClsfName = String.format(frmtBuilder.toString(), 8010, 8020,
+            secRule.getProtocol().getIdentityref().getSimpleName(), secRule.getEthertype().getSimpleName());
         ClassifierName expectedClsfInstanceName = new ClassifierName(frmtClsfName);
         assertEquals(expectedClsfInstanceName, SecRuleNameDecoder.getClassifierInstanceName(secRule.build()));
     }

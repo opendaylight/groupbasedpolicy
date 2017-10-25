@@ -14,10 +14,10 @@ import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import com.google.common.base.Optional;
+
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
-
-import com.google.common.base.Optional;
 
 import org.junit.Before;
 import org.junit.Rule;
@@ -29,8 +29,6 @@ import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.test.NeutronMapperDataBrokerTest;
 import org.opendaylight.groupbasedpolicy.util.DataStoreHelper;
 import org.opendaylight.groupbasedpolicy.util.IidFactory;
-import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.IpPrefix;
-import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.Ipv4Prefix;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.yang.types.rev130715.Uuid;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ContextId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.L3ContextId;
@@ -49,7 +47,6 @@ public class NeutronNetworkAwareDataStoreTest extends NeutronMapperDataBrokerTes
     private final Uuid tenantUuid = new Uuid("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
     private final Uuid networkUuid = new Uuid("dddddddd-dddd-dddd-dddd-dddddddddddd");
     private static final long METADATA_IPV4_SERVER_PORT = 80;
-    private static final IpPrefix METADATA_IP_PREFIX = new IpPrefix(new Ipv4Prefix("169.254.169.254/32"));
 
     private DataBroker dataBroker;
     private NeutronNetworkAware networkAware;
@@ -156,12 +153,12 @@ public class NeutronNetworkAwareDataStoreTest extends NeutronMapperDataBrokerTes
     }
 
     private Optional<L3Context> getL3ContextOptional(Network network) {
-        ReadOnlyTransaction rTx = dataBroker.newReadOnlyTransaction();
+        ReadOnlyTransaction readTx = dataBroker.newReadOnlyTransaction();
         TenantId tenantId = new TenantId(network.getTenantId().getValue());
         ContextId l3CtxId = new ContextId(network.getUuid().getValue());
         L3ContextId l3ContextId = new L3ContextId(l3CtxId);
         InstanceIdentifier<L3Context> l3ContextIid = IidFactory.l3ContextIid(tenantId, l3ContextId);
-        return DataStoreHelper.readFromDs(LogicalDatastoreType.CONFIGURATION, l3ContextIid, rTx);
+        return DataStoreHelper.readFromDs(LogicalDatastoreType.CONFIGURATION, l3ContextIid, readTx);
     }
 
 }

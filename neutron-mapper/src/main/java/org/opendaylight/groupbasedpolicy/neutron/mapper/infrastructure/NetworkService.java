@@ -8,6 +8,8 @@
 
 package org.opendaylight.groupbasedpolicy.neutron.mapper.infrastructure;
 
+import com.google.common.collect.ImmutableList;
+
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
@@ -44,12 +46,10 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.subject.feature.instances.ActionInstance;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.subject.feature.instances.ClassifierInstance;
 
-import com.google.common.collect.ImmutableList;
-
 public class NetworkService extends ServiceUtil {
 
     /**
-     * Unit tests {@link NetworkServiceTest}
+     * Unit tests {@link NetworkServiceTest}.
      */
     // ########### DHCP
     private static final long DHCP_IPV4_SERVER_PORT = 67;
@@ -69,7 +69,7 @@ public class NetworkService extends ServiceUtil {
             new Description("Allow DHCP communication between client and server.");
 
     /**
-     * Id of {@link #DHCP_CONTRACT}
+     * Id of {@link #DHCP_CONTRACT}.
      */
     public static final ContractId DHCP_CONTRACT_ID = new ContractId("11118d2e-dddd-11e5-885d-feff819cdc9f");
     /**
@@ -78,7 +78,7 @@ public class NetworkService extends ServiceUtil {
      */
     public static final Contract DHCP_CONTRACT;
     /**
-     * {@link ConsumerNamedSelector} pointing to {@link #DHCP_CONTRACT}
+     * {@link ConsumerNamedSelector} pointing to {@link #DHCP_CONTRACT}.
      */
     public static final ConsumerNamedSelector DHCP_CONTRACT_CONSUMER_SELECTOR;
 
@@ -104,7 +104,7 @@ public class NetworkService extends ServiceUtil {
     private static final Description DNS_CONTRACT_DESC =
             new Description("Allow DNS communication between client and server.");
     /**
-     * ID of {@link #DNS_CONTRACT}
+     * ID of {@link #DNS_CONTRACT}.
      */
     public static final ContractId DNS_CONTRACT_ID = new ContractId("22218d2e-dddd-11e5-885d-feff819cdc9f");
     /**
@@ -113,7 +113,7 @@ public class NetworkService extends ServiceUtil {
      */
     public static final Contract DNS_CONTRACT;
     /**
-     * {@link ConsumerNamedSelector} pointing to {@link #DNS_CONTRACT}
+     * {@link ConsumerNamedSelector} pointing to {@link #DNS_CONTRACT}.
      */
     public static final ConsumerNamedSelector DNS_CONTRACT_CONSUMER_SELECTOR;
 
@@ -136,17 +136,16 @@ public class NetworkService extends ServiceUtil {
             new Description("Allow ICMP and SSH management communication between server and client.");
 
     /**
-     * Id of {@link #MGMT_CONTRACT}
+     * Id of {@link #MGMT_CONTRACT}.
      */
     public static final ContractId MGMT_CONTRACT_ID = new ContractId("33318d2e-dddd-11e5-885d-feff819cdc9f");
     /**
-     * Contains rules with action {@link MappingUtils#ACTION_REF_ALLOW} matching ICMP and SSH
-     * communication
+     * Contains rules with action {@link MappingUtils#ACTION_REF_ALLOW} matching ICMP and SSH communication
      * between Client and Server.
      */
     public static final Contract MGMT_CONTRACT;
     /**
-     * {@link ConsumerNamedSelector} pointing to {@link #MGMT_CONTRACT}
+     * {@link ConsumerNamedSelector} pointing to {@link #MGMT_CONTRACT}.
      */
     public static final ConsumerNamedSelector MGMT_CONTRACT_CONSUMER_SELECTOR;
 
@@ -154,11 +153,11 @@ public class NetworkService extends ServiceUtil {
     private static final Name NETWORK_SERVICE_EPG_NAME = new Name("NETWORK_SERVICE");
     private static final Description NETWORK_SERVICE_EPG_DESC = new Description("Represents DHCP and DNS servers.");
     /**
-     * ID of {@link #EPG}
+     * ID of {@link #EPG}.
      */
     public static final EndpointGroupId EPG_ID = new EndpointGroupId("ddd6cfe6-dfe5-11e4-8a00-1681e6b88ec1");
     /**
-     * Network-service endpoint-group providing {@link #DHCP_CONTRACT} and {@link #DNS_CONTRACT}
+     * Network-service endpoint-group providing {@link #DHCP_CONTRACT} and {@link #DNS_CONTRACT}.
      */
     public static final EndpointGroup EPG;
 
@@ -237,13 +236,13 @@ public class NetworkService extends ServiceUtil {
      *
      * @param tenantId location of {@link #DHCP_CONTRACT}
      * @param ipPrefix used in {@link L3EndpointIdentificationConstraints}
-     * @param wTx transaction where entities are written
+     * @param writeTx transaction where entities are written
      */
     public static void writeDhcpClauseWithConsProvEic(TenantId tenantId, @Nullable IpPrefix ipPrefix,
-            WriteTransaction wTx) {
+            WriteTransaction writeTx) {
         Clause clause = createClauseWithConsProvEic(ipPrefix, DHCP_SUBJECT_NAME);
-        wTx.put(LogicalDatastoreType.CONFIGURATION, IidFactory.clauseIid(tenantId, DHCP_CONTRACT_ID, clause.getName()),
-                clause, true);
+        writeTx.put(LogicalDatastoreType.CONFIGURATION, IidFactory.clauseIid(tenantId, DHCP_CONTRACT_ID,
+            clause.getName()), clause, true);
     }
 
     /**
@@ -252,13 +251,13 @@ public class NetworkService extends ServiceUtil {
      *
      * @param tenantId location of {@link #DNS_CONTRACT}
      * @param ipPrefix used in {@link L3EndpointIdentificationConstraints}
-     * @param wTx transaction where entities are written
+     * @param writeTx transaction where entities are written
      */
     public static void writeDnsClauseWithConsProvEic(TenantId tenantId, @Nullable IpPrefix ipPrefix,
-            WriteTransaction wTx) {
+            WriteTransaction writeTx) {
         Clause clause = createClauseWithConsProvEic(ipPrefix, DNS_SUBJECT_NAME);
-        wTx.put(LogicalDatastoreType.CONFIGURATION, IidFactory.clauseIid(tenantId, DNS_CONTRACT_ID, clause.getName()),
-                clause, true);
+        writeTx.put(LogicalDatastoreType.CONFIGURATION, IidFactory.clauseIid(tenantId, DNS_CONTRACT_ID,
+            clause.getName()), clause, true);
     }
 
     /**
@@ -267,44 +266,46 @@ public class NetworkService extends ServiceUtil {
      *
      * @param tenantId location of {@link #MGMT_CONTRACT}
      * @param ipPrefix used in {@link L3EndpointIdentificationConstraints}
-     * @param wTx transaction where entities are written
+     * @param writeTx transaction where entities are written
      */
     public static void writeMgmtClauseWithConsProvEic(TenantId tenantId, @Nullable IpPrefix ipPrefix,
-            WriteTransaction wTx) {
+            WriteTransaction writeTx) {
         Clause clause = createClauseWithConsProvEic(ipPrefix, MGMT_SUBJECT_NAME);
-        wTx.put(LogicalDatastoreType.CONFIGURATION, IidFactory.clauseIid(tenantId, MGMT_CONTRACT_ID, clause.getName()),
-                clause, true);
+        writeTx.put(LogicalDatastoreType.CONFIGURATION, IidFactory.clauseIid(tenantId, MGMT_CONTRACT_ID,
+            clause.getName()), clause, true);
     }
 
     /**
      * Puts network service entities (classifier-instances, {@link #DHCP_CONTRACT},
      * {@link #DNS_CONTRACT}, {@link #MGMT_CONTRACT} and {@link #EPG}) to
-     * {@link LogicalDatastoreType#CONFIGURATION}
+     * {@link LogicalDatastoreType#CONFIGURATION}.
      *
      * @param tenantId location of network-service entities
-     * @param wTx transaction where network-service entities are written
+     * @param writeTx transaction where network-service entities are written
      */
-    public static void writeNetworkServiceEntitiesToTenant(TenantId tenantId, WriteTransaction wTx) {
+    public static void writeNetworkServiceEntitiesToTenant(TenantId tenantId, WriteTransaction writeTx) {
         Set<ClassifierInstance> classifierInstances = getAllClassifierInstances();
         for (ClassifierInstance ci : classifierInstances) {
-            wTx.put(LogicalDatastoreType.CONFIGURATION, IidFactory.classifierInstanceIid(tenantId, ci.getName()), ci,
-                    true);
+            writeTx.put(LogicalDatastoreType.CONFIGURATION, IidFactory.classifierInstanceIid(tenantId, ci.getName()),
+                ci, true);
         }
         for (ActionInstance ai : Collections.singleton(MappingUtils.ACTION_ALLOW)) {
-            wTx.put(LogicalDatastoreType.CONFIGURATION, IidFactory.actionInstanceIid(tenantId, ai.getName()), ai, true);
+            writeTx.put(LogicalDatastoreType.CONFIGURATION, IidFactory.actionInstanceIid(tenantId, ai.getName()), ai,
+                true);
         }
-        wTx.put(LogicalDatastoreType.CONFIGURATION, IidFactory.contractIid(tenantId, DHCP_CONTRACT_ID), DHCP_CONTRACT,
-                true);
-        wTx.put(LogicalDatastoreType.CONFIGURATION, IidFactory.contractIid(tenantId, DNS_CONTRACT_ID), DNS_CONTRACT,
-                true);
-        wTx.put(LogicalDatastoreType.CONFIGURATION, IidFactory.contractIid(tenantId, MGMT_CONTRACT_ID), MGMT_CONTRACT,
-                true);
-        wTx.put(LogicalDatastoreType.CONFIGURATION, IidFactory.endpointGroupIid(tenantId, EPG_ID), EPG, true);
+        writeTx.put(LogicalDatastoreType.CONFIGURATION, IidFactory.contractIid(tenantId, DHCP_CONTRACT_ID),
+            DHCP_CONTRACT, true);
+        writeTx.put(LogicalDatastoreType.CONFIGURATION, IidFactory.contractIid(tenantId, DNS_CONTRACT_ID), DNS_CONTRACT,
+            true);
+        writeTx.put(LogicalDatastoreType.CONFIGURATION, IidFactory.contractIid(tenantId, MGMT_CONTRACT_ID),
+            MGMT_CONTRACT, true);
+        writeTx.put(LogicalDatastoreType.CONFIGURATION, IidFactory.endpointGroupIid(tenantId, EPG_ID), EPG, true);
     }
 
     /**
+     * Used to get all Classifier instances.
      * @return All classifier-instances used in {@link #DHCP_CONTRACT}, {@link #DNS_CONTRACT} and
-     *         {@link #MGMT_CONTRACT}
+     * {@link #MGMT_CONTRACT}.
      */
     public static Set<ClassifierInstance> getAllClassifierInstances() {
         HashSet<ClassifierInstance> cis = new HashSet<>();

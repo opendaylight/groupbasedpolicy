@@ -7,6 +7,8 @@
  */
 package org.opendaylight.groupbasedpolicy.neutron.mapper.test;
 
+import com.google.common.base.Strings;
+
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.yang.types.rev130715.Uuid;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.constants.rev150712.DirectionBase;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.constants.rev150712.EthertypeBase;
@@ -16,8 +18,6 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.secgroups.rev150712
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.secgroups.rev150712.security.groups.attributes.security.groups.SecurityGroupBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.secgroups.rev150712.security.rules.attributes.security.rules.SecurityRule;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.secgroups.rev150712.security.rules.attributes.security.rules.SecurityRuleBuilder;
-
-import com.google.common.base.Strings;
 
 public final class NeutronEntityFactory {
 
@@ -33,8 +33,10 @@ public final class NeutronEntityFactory {
         return new SecurityGroupBuilder().setUuid(new Uuid(id)).setTenantId(new Uuid(tenantId)).setName(name).build();
     }
 
-    public static SecurityRule securityRuleWithoutGroupIds(String id, String tenant, Class<? extends EthertypeBase> etherType,
-            Class<? extends DirectionBase> direction, Class<? extends ProtocolBase> protocol, int portMin, int portMax) {
+    public static SecurityRule securityRuleWithoutGroupIds(String id, String tenant,
+        Class<? extends EthertypeBase> etherType, Class<? extends DirectionBase> direction,
+        Class<? extends ProtocolBase> protocol, int portMin, int portMax) {
+
         SecurityRuleAttributes.Protocol proto = new SecurityRuleAttributes.Protocol(protocol);
         SecurityRuleBuilder secRule = new SecurityRuleBuilder();
         secRule.setUuid(new Uuid(id));

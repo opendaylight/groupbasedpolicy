@@ -9,6 +9,10 @@ package org.opendaylight.groupbasedpolicy.neutron.mapper.util;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
+import com.google.common.base.Preconditions;
+import com.google.common.base.Strings;
+import com.google.common.net.InetAddresses;
+
 import java.net.Inet4Address;
 import java.net.InetAddress;
 
@@ -30,10 +34,6 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.l3.rev150712.floatingips.attributes.floatingips.Floatingip;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.google.common.base.Preconditions;
-import com.google.common.base.Strings;
-import com.google.common.net.InetAddresses;
 
 public class Utils {
 

@@ -9,11 +9,14 @@ package org.opendaylight.groupbasedpolicy.neutron.mapper.mapping;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
+import com.google.common.base.Optional;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 
 import javax.annotation.Nullable;
@@ -94,10 +97,6 @@ import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.base.Optional;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
-
 public class NeutronPortAware implements NeutronAware<Port> {
 
     private static final Logger LOG = LoggerFactory.getLogger(NeutronPortAware.class);
@@ -119,6 +118,8 @@ public class NeutronPortAware implements NeutronAware<Port> {
         onCreated(createdItem, neutron, true);
     }
 
+    @SuppressWarnings("checkstyle:LineLength") // Longer lines in this method are caused by long package names,
+                                               // this will be removed when deprecated classes will be cleared.
     public void onCreated(Port port, Neutron neutron, boolean addBaseEpMapping) {
         LOG.trace("created port - {}", port);
         if (PortUtils.isRouterInterfacePort(port)) {
@@ -129,12 +130,12 @@ public class NeutronPortAware implements NeutronAware<Port> {
                 LOG.warn("Illegal state - router interface port does not contain fixed IPs {}", port);
                 return;
             }
-            FixedIps portIpWithSubnet = potentialPortIpWithSubnet.get();
-            ContextId routerL3Context = new ContextId(port.getDeviceId());
-            ReadWriteTransaction rwTx = dataProvider.newReadWriteTransaction();
+            final FixedIps portIpWithSubnet = potentialPortIpWithSubnet.get();
+            final ContextId routerL3Context = new ContextId(port.getDeviceId());
             AddressEndpointKey addrEpKey = new AddressEndpointKey(port.getMacAddress().getValue(), MacAddressType.class,
                     new ContextId(port.getNetworkId().getValue()), MappingUtils.L2_BRDIGE_DOMAIN);
             UniqueId portId = new UniqueId(port.getUuid().getValue());
+            ReadWriteTransaction rwTx = dataProvider.newReadWriteTransaction();
             addBaseEndpointMappings(addrEpKey, portId, rwTx);
             // Add Qrouter and VPProuter port as Endpoint
             if (port.getAugmentation(PortBindingExtension.class) != null && PortUtils.DEVICE_VIF_TYPE
@@ -299,6 +300,8 @@ public class NeutronPortAware implements NeutronAware<Port> {
     }
 
     @Deprecated
+    @SuppressWarnings("checkstyle:LineLength") // Longer lines in this method are caused by long package names,
+                                               // this will be removed when deprecated classes will be cleared.
     private void processTenantForwarding(Subnet routerPortSubnet, ContextId routerL3Context, FixedIps portIpWithSubnet,
             TenantId tenantId, ReadWriteTransaction rwTx) {
         L2BridgeDomainId l2BdId = new L2BridgeDomainId(routerPortSubnet.getNetworkId().getValue());
@@ -317,6 +320,8 @@ public class NeutronPortAware implements NeutronAware<Port> {
      * Creates registration input for L3 endpoint if fixedIps argument is not null.
      */
     @Deprecated
+    @SuppressWarnings("checkstyle:LineLength") // Longer lines in this method are caused by long package names,
+                                               // this will be removed when deprecated classes will be cleared.
     private org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.RegisterEndpointInputBuilder createEndpointRegFromPort(
             Port port, FixedIps fixedIps, NetworkDomainId networkContainment, List<EndpointGroupId> endpointGroupIds,
             Neutron neutron) {
@@ -426,6 +431,8 @@ public class NeutronPortAware implements NeutronAware<Port> {
     }
 
     @Deprecated
+    @SuppressWarnings("checkstyle:LineLength") // Longer lines in this method are caused by long package names,
+                                               // this will be removed when deprecated classes will be cleared.
     private void modifyL3ContextForEndpoints(Port port, FixedIps resolvedPortFixedIp, ContextId newContextId) {
         org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.RegisterEndpointInputBuilder epInBuilder =
                 createBasicEndpointInputBuilder(port);
@@ -511,6 +518,8 @@ public class NeutronPortAware implements NeutronAware<Port> {
     }
 
     @Deprecated
+    @SuppressWarnings("checkstyle:LineLength") // Longer lines in this method are caused by long package names,
+                                               // this will be removed when deprecated classes will be cleared.
     private static org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.RegisterEndpointInputBuilder createBasicEndpointInputBuilder(
             Port port) {
         return new org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.RegisterEndpointInputBuilder()
@@ -532,6 +541,8 @@ public class NeutronPortAware implements NeutronAware<Port> {
     }
 
     @Deprecated
+    @SuppressWarnings("checkstyle:LineLength") // Longer lines in this method are caused by long package names,
+                                               // this will be removed when deprecated classes will be cleared.
     private void registerEndpointAndStoreMapping(
             org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.RegisterEndpointInput regEpInput,
             Port port, ReadWriteTransaction rwTx) {
@@ -555,6 +566,8 @@ public class NeutronPortAware implements NeutronAware<Port> {
     }
 
     @Deprecated
+    @SuppressWarnings("checkstyle:LineLength") // Longer lines in this method are caused by long package names,
+                                               // this will be removed when deprecated classes will be cleared.
     private void unregisterEndpointAndRemoveMapping(
             org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.UnregisterEndpointInput unregEpInput,
             Port port, ReadWriteTransaction rwTx) {
@@ -572,8 +585,23 @@ public class NeutronPortAware implements NeutronAware<Port> {
         }
     }
 
+    private void unregisterEndpointAndRemoveMapping(UnregisterEndpointInput baseEpUnreg, Port port,
+        ReadWriteTransaction rwTx, boolean removeBaseEpMappings) {
+        boolean isUnregisteredBaseEndpoint = epRegistrator.unregisterEndpoint(baseEpUnreg);
+        if (isUnregisteredBaseEndpoint) {
+            UniqueId portId = new UniqueId(port.getUuid().getValue());
+            PortByBaseEndpointKey portByBaseEndpointKey = new PortByBaseEndpointKey(port.getMacAddress().getValue(),
+                MacAddressType.class, new ContextId(port.getNetworkId().getValue()), MappingUtils.L2_BRDIGE_DOMAIN);
+            LOG.trace("Removing Port-BaseEndpoint mapping for port {} (device owner {}) and endpoint {}",
+                port.getUuid().getValue(), port.getDeviceOwner(), portByBaseEndpointKey);
+            if (removeBaseEpMappings) {
+                removeBaseEndpointMappings(portByBaseEndpointKey, portId, rwTx);
+            }
+        }
+    }
+
     private void registerBaseEndpointAndStoreMapping(List<AddressEndpointReg> addrEpRegs, Port port,
-            WriteTransaction wTx, boolean addBaseEpMappings) {
+            WriteTransaction writeTx, boolean addBaseEpMappings) {
         RegisterEndpointInput regBaseEpInput =
                 new RegisterEndpointInputBuilder().setAddressEndpointReg(addrEpRegs).build();
 
@@ -589,34 +617,19 @@ public class NeutronPortAware implements NeutronAware<Port> {
                         port.getUuid());
                 AddressEndpointKey addrEpKey = new AddressEndpointKey(addrEpReg.getAddress(),
                         addrEpReg.getAddressType(), addrEpReg.getContextId(), addrEpReg.getContextType());
-                addBaseEndpointMappings(addrEpKey, portId, wTx);
+                addBaseEndpointMappings(addrEpKey, portId, writeTx);
             }
         }
     }
 
-    private void addBaseEndpointMappings(AddressEndpointKey addrEpKey, UniqueId portId, WriteTransaction wTx) {
+    private void addBaseEndpointMappings(AddressEndpointKey addrEpKey, UniqueId portId, WriteTransaction writeTx) {
         BaseEndpointByPort baseEndpointByPort = MappingFactory.createBaseEndpointByPort(addrEpKey, portId);
-        wTx.put(LogicalDatastoreType.OPERATIONAL, NeutronGbpIidFactory.baseEndpointByPortIid(portId),
+        writeTx.put(LogicalDatastoreType.OPERATIONAL, NeutronGbpIidFactory.baseEndpointByPortIid(portId),
                 baseEndpointByPort, true);
         PortByBaseEndpoint portByBaseEndpoint = MappingFactory.createPortByBaseEndpoint(portId, addrEpKey);
-        wTx.put(LogicalDatastoreType.OPERATIONAL,
+        writeTx.put(LogicalDatastoreType.OPERATIONAL,
                 NeutronGbpIidFactory.portByBaseEndpointIid(new PortByBaseEndpointKey(portByBaseEndpoint.getKey())),
                 portByBaseEndpoint, true);
-    }
-
-    private void unregisterEndpointAndRemoveMapping(UnregisterEndpointInput baseEpUnreg, Port port,
-            ReadWriteTransaction rwTx, boolean removeBaseEpMappings) {
-        boolean isUnregisteredBaseEndpoint = epRegistrator.unregisterEndpoint(baseEpUnreg);
-        if (isUnregisteredBaseEndpoint) {
-            UniqueId portId = new UniqueId(port.getUuid().getValue());
-            PortByBaseEndpointKey portByBaseEndpointKey = new PortByBaseEndpointKey(port.getMacAddress().getValue(),
-                    MacAddressType.class, new ContextId(port.getNetworkId().getValue()), MappingUtils.L2_BRDIGE_DOMAIN);
-            LOG.trace("Removing Port-BaseEndpoint mapping for port {} (device owner {}) and endpoint {}",
-                    port.getUuid().getValue(), port.getDeviceOwner(), portByBaseEndpointKey);
-            if (removeBaseEpMappings) {
-                removeBaseEndpointMappings(portByBaseEndpointKey, portId, rwTx);
-            }
-        }
     }
 
     private void removeBaseEndpointMappings(PortByBaseEndpointKey portByBaseEndpointKey, UniqueId portId,
@@ -722,6 +735,8 @@ public class NeutronPortAware implements NeutronAware<Port> {
     }
 
     @Deprecated
+    @SuppressWarnings("checkstyle:LineLength") // Longer lines in this method are caused by long package names,
+                                               // this will be removed when deprecated classes will be cleared.
     private void modifyForwardingOnDelete(Subnet routerPortSubnet, L3ContextId l3contextId, TenantId tenantId,
             ReadWriteTransaction rwTx) {
         L2BridgeDomainId l2BdId = new L2BridgeDomainId(routerPortSubnet.getNetworkId().getValue());
@@ -734,9 +749,10 @@ public class NeutronPortAware implements NeutronAware<Port> {
                 tenantSubnet);
     }
 
+    @SuppressWarnings("checkstyle:LineLength") // Longer lines in this method are caused by long package names,
+                                               // this will be removed when deprecated classes will be cleared.
     private org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.UnregisterEndpointInput createUnregisterBaseEndpointInput(
             Port port, Neutron neutron) {
-        UnregisterEndpointInputBuilder inputBuilder = new UnregisterEndpointInputBuilder();
         List<AddressEndpointUnreg> list = new ArrayList<>();
         AddressEndpointUnregBuilder addrL2EpUnregBuilder = new AddressEndpointUnregBuilder();
         addrL2EpUnregBuilder.setAddress(port.getMacAddress().getValue())
@@ -755,11 +771,14 @@ public class NeutronPortAware implements NeutronAware<Port> {
                 .setContextType(L3Context.class);
             list.add(addrL3EpUnregBuilder.build());
         }
+        UnregisterEndpointInputBuilder inputBuilder = new UnregisterEndpointInputBuilder();
         inputBuilder.setAddressEndpointUnreg(list);
         return inputBuilder.build();
     }
 
     @Deprecated
+    @SuppressWarnings("checkstyle:LineLength") // Longer lines in this method are caused by long package names,
+                                               // this will be removed when deprecated classes will be cleared.
     private org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.UnregisterEndpointInput createUnregisterEndpointInput(
             Port port, Neutron neutron) {
         org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.UnregisterEndpointInputBuilder inputBuilder =

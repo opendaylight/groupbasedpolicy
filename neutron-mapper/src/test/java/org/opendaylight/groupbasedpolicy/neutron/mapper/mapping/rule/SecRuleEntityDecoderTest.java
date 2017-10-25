@@ -154,8 +154,6 @@ public class SecRuleEntityDecoderTest {
             .append(MappingUtils.NAME_VALUE_DELIMETER)
             .append(EthertypeV4.class.getSimpleName())
             .toString();
-        System.out.println(expectedName);
-        System.out.println(ci.getName().getValue());
         Assert.assertEquals(expectedName, ci.getName().getValue());
         List<ParameterValue> parameterValues = ci.getParameterValue();
         Assert.assertNotNull(parameterValues);
@@ -184,7 +182,7 @@ public class SecRuleEntityDecoderTest {
         Assert.assertTrue("Classifier-instance does not contain destination port parameter", containsDstPortParam);
     }
 
-    private final void assertClassifierParameterValue(ParameterValue parameter, Long expectedIntValue,
+    private void assertClassifierParameterValue(ParameterValue parameter, Long expectedIntValue,
             String expectedStringValue, RangeValue expectedRangeValue) {
         Assert.assertEquals(expectedIntValue, parameter.getIntValue());
         Assert.assertEquals(expectedStringValue, parameter.getStringValue());
@@ -447,13 +445,15 @@ public class SecRuleEntityDecoderTest {
     @Test
     public final void testGetEtherType_ethertypeIPv4() {
         secRuleBuilder.setEthertype(EthertypeV4.class);
-        Assert.assertEquals(EtherTypeClassifierDefinition.IPv4_VALUE, SecRuleEntityDecoder.getEtherType(secRuleBuilder.build()));
+        Assert.assertEquals(EtherTypeClassifierDefinition.IPv4_VALUE,
+            SecRuleEntityDecoder.getEtherType(secRuleBuilder.build()));
     }
 
     @Test
     public final void testGetEtherType_ethertypeIPv6() {
         secRuleBuilder.setEthertype(EthertypeV6.class);
-        Assert.assertEquals(EtherTypeClassifierDefinition.IPv6_VALUE, SecRuleEntityDecoder.getEtherType(secRuleBuilder.build()));
+        Assert.assertEquals(EtherTypeClassifierDefinition.IPv6_VALUE,
+            SecRuleEntityDecoder.getEtherType(secRuleBuilder.build()));
     }
 
     @Test
@@ -476,21 +476,24 @@ public class SecRuleEntityDecoderTest {
     public final void testGetProtocol_protoTcp() {
         SecurityRuleAttributes.Protocol protocolTcp = new SecurityRuleAttributes.Protocol(ProtocolTcp.class);
         secRuleBuilder.setProtocol(protocolTcp);
-        Assert.assertEquals(IpProtoClassifierDefinition.TCP_VALUE, SecRuleEntityDecoder.getProtocol(secRuleBuilder.build()));
+        Assert.assertEquals(IpProtoClassifierDefinition.TCP_VALUE,
+            SecRuleEntityDecoder.getProtocol(secRuleBuilder.build()));
     }
 
     @Test
     public final void testGetProtocol_protoUdp() {
         SecurityRuleAttributes.Protocol protocolUdp = new SecurityRuleAttributes.Protocol(ProtocolUdp.class);
         secRuleBuilder.setProtocol(protocolUdp);
-        Assert.assertEquals(IpProtoClassifierDefinition.UDP_VALUE, SecRuleEntityDecoder.getProtocol(secRuleBuilder.build()));
+        Assert.assertEquals(IpProtoClassifierDefinition.UDP_VALUE,
+            SecRuleEntityDecoder.getProtocol(secRuleBuilder.build()));
     }
 
     @Test
     public final void testGetProtocol_protoIcmp() {
         SecurityRuleAttributes.Protocol protocolIcmp = new SecurityRuleAttributes.Protocol(ProtocolIcmp.class);
         secRuleBuilder.setProtocol(protocolIcmp);
-        Assert.assertEquals(IpProtoClassifierDefinition.ICMP_VALUE, SecRuleEntityDecoder.getProtocol(secRuleBuilder.build()));
+        Assert.assertEquals(IpProtoClassifierDefinition.ICMP_VALUE,
+            SecRuleEntityDecoder.getProtocol(secRuleBuilder.build()));
     }
 
     @Test

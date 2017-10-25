@@ -19,6 +19,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.UniqueId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev170511.IpPrefixType;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.rev160427.ContextType;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.neutron.gbp.mapper.rev150513.Mappings;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.neutron.gbp.mapper.rev150513.mappings.GbpByNeutronMappings;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.neutron.gbp.mapper.rev150513.mappings.NeutronByGbpMappings;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.neutron.gbp.mapper.rev150513.mappings.gbp.by.neutron.mappings.BaseEndpointsByPorts;
@@ -48,8 +49,7 @@ import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 public class NeutronGbpIidFactory {
 
     public static InstanceIdentifier<BaseEndpointByPort> baseEndpointByPortIid(UniqueId portId) {
-        return InstanceIdentifier.builder(
-                org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.neutron.gbp.mapper.rev150513.Mappings.class)
+        return InstanceIdentifier.builder(Mappings.class)
             .child(GbpByNeutronMappings.class)
             .child(BaseEndpointsByPorts.class)
             .child(BaseEndpointByPort.class, new BaseEndpointByPortKey(portId))
@@ -59,8 +59,7 @@ public class NeutronGbpIidFactory {
     @Deprecated
     public static InstanceIdentifier<EndpointByPort> endpointByPortIid(UniqueId portId) {
         return InstanceIdentifier
-            .builder(
-                    org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.neutron.gbp.mapper.rev150513.Mappings.class)
+            .builder(Mappings.class)
             .child(GbpByNeutronMappings.class)
             .child(EndpointsByPorts.class)
             .child(EndpointByPort.class, new EndpointByPortKey(portId))
@@ -68,8 +67,7 @@ public class NeutronGbpIidFactory {
     }
 
     public static InstanceIdentifier<PortByBaseEndpoint> portByBaseEndpointIid(PortByBaseEndpointKey baseEpkey) {
-        return InstanceIdentifier.builder(
-                org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.neutron.gbp.mapper.rev150513.Mappings.class)
+        return InstanceIdentifier.builder(Mappings.class)
             .child(NeutronByGbpMappings.class)
             .child(PortsByBaseEndpoints.class)
             .child(PortByBaseEndpoint.class, baseEpkey)
@@ -79,8 +77,7 @@ public class NeutronGbpIidFactory {
     @Deprecated
     public static InstanceIdentifier<PortByEndpoint> portByEndpointIid(L2BridgeDomainId l2BdId, MacAddress mac) {
         return InstanceIdentifier
-            .builder(
-                    org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.neutron.gbp.mapper.rev150513.Mappings.class)
+            .builder(Mappings.class)
             .child(NeutronByGbpMappings.class)
             .child(PortsByEndpoints.class)
             .child(PortByEndpoint.class, new PortByEndpointKey(l2BdId, mac))
@@ -94,8 +91,7 @@ public class NeutronGbpIidFactory {
                 IpPrefixType.class,
                 contextId,
                 contextType);
-        return InstanceIdentifier.builder(
-                org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.neutron.gbp.mapper.rev150513.Mappings.class)
+        return InstanceIdentifier.builder(Mappings.class)
             .child(NeutronByGbpMappings.class)
             .child(ExternalGatewaysAsEndpoints.class)
             .child(ExternalGatewayAsEndpoint.class, key)
@@ -106,8 +102,7 @@ public class NeutronGbpIidFactory {
     public static InstanceIdentifier<ExternalGatewayAsL3Endpoint> externalGatewayAsL3Endpoint(L3ContextId l3Context,
             IpAddress ipAddress) {
         return InstanceIdentifier
-            .builder(
-                    org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.neutron.gbp.mapper.rev150513.Mappings.class)
+            .builder(Mappings.class)
             .child(NeutronByGbpMappings.class)
             .child(ExternalGatewaysAsL3Endpoints.class)
             .child(ExternalGatewayAsL3Endpoint.class, new ExternalGatewayAsL3EndpointKey(ipAddress, l3Context))
@@ -116,8 +111,7 @@ public class NeutronGbpIidFactory {
 
     public static InstanceIdentifier<ProviderPhysicalNetworkAsL2FloodDomain> providerPhysicalNetworkAsL2FloodDomainIid(
             TenantId tenantId, ContextId domainId) {
-        return InstanceIdentifier.builder(
-                org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.neutron.gbp.mapper.rev150513.Mappings.class)
+        return InstanceIdentifier.builder(Mappings.class)
             .child(NeutronByGbpMappings.class)
             .child(ProviderNetworksAsL2FloodDomains.class)
             .child(ProviderPhysicalNetworkAsL2FloodDomain.class,
@@ -126,10 +120,11 @@ public class NeutronGbpIidFactory {
     }
 
     @Deprecated
+    @SuppressWarnings("checkstyle:LineLength") // Longer lines in this method are caused by long package names,
+                                               // this will be removed when deprecated classes will be cleared.
     public static InstanceIdentifier<org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.neutron.gbp.mapper.rev150513.mappings.neutron.by.gbp.mappings.provider.physical.networks.as.l2.flood.domains.ProviderPhysicalNetworkAsL2FloodDomain> providerPhysicalNetworkAsL2FloodDomainIid(
             TenantId tenantId, L2FloodDomainId l2FdId) {
-        return InstanceIdentifier.builder(
-                org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.neutron.gbp.mapper.rev150513.Mappings.class)
+        return InstanceIdentifier.builder(Mappings.class)
             .child(NeutronByGbpMappings.class)
             .child(ProviderPhysicalNetworksAsL2FloodDomains.class)
             .child(org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.neutron.gbp.mapper.rev150513.mappings.neutron.by.gbp.mappings.provider.physical.networks.as.l2.flood.domains.ProviderPhysicalNetworkAsL2FloodDomain.class,

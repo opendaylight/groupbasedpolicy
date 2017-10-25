@@ -8,6 +8,8 @@
 
 package org.opendaylight.groupbasedpolicy.neutron.mapper.util;
 
+import com.google.common.base.Optional;
+
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
@@ -21,8 +23,6 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.binding.rev150712.P
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.ports.rev150712.port.attributes.FixedIps;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.ports.rev150712.ports.attributes.Ports;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.ports.rev150712.ports.attributes.ports.Port;
-
-import com.google.common.base.Optional;
 
 public class PortUtils {
 
