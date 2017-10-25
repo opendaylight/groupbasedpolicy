@@ -114,7 +114,7 @@ public class StatisticManagerImplTest {
     @Test
     public void testWriteStat() {
         StatRecords input = inputForWriting();
-        StatisticRecordKey key = new StatisticRecordKey(new RecordId(0l));
+        StatisticRecordKey key = new StatisticRecordKey(new RecordId(0L));
         StatisticRecord output = outputForWriting(key);
 
         CheckedFuture<Void, TransactionCommitFailedException> future = mock(CheckedFuture.class);
@@ -165,16 +165,16 @@ public class StatisticManagerImplTest {
             .setSubject(subject)
             .setClassifier(Collections.singletonList(classifier))
             .setAction(Collections.singletonList(action))
-            .setByteCount(25l)
-            .setPacketCount(5l);
-        StatisticRecordKey key = new StatisticRecordKey(new RecordId(0l));
+            .setByteCount(25L)
+            .setPacketCount(5L);
+        StatisticRecordKey key = new StatisticRecordKey(new RecordId(0L));
         StatisticRecordBuilder statRecord = new StatisticRecordBuilder().setKey(key)
             .setStatistic(Collections.singletonList(statBuilder.build()))
             .setSrcEndpoint(srcBuilder.build())
             .setDstEndpoint(dstBuilder.build());
         List<StatisticRecord> stats = new ArrayList<>();
         stats.add(statRecord.build());
-        statRecord.setKey(new StatisticRecordKey(new RecordId(1l)));
+        statRecord.setKey(new StatisticRecordKey(new RecordId(1L)));
         stats.add(statRecord.build());
 
         return stats;
@@ -211,8 +211,8 @@ public class StatisticManagerImplTest {
             .setSubject(subject)
             .setClassifier(Collections.singletonList(classifier))
             .setAction(Collections.singletonList(action))
-            .setByteCount(25l)
-            .setPacketCount(5l);
+            .setByteCount(25L)
+            .setPacketCount(5L);
         StatisticRecordBuilder statRecord = new StatisticRecordBuilder().setKey(key)
             .setStatistic(Collections.singletonList(statBuilder.build()))
             .setSrcEndpoint(srcBuilder.build())

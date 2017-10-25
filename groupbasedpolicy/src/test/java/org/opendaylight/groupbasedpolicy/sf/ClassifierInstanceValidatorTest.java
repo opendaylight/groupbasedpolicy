@@ -50,7 +50,7 @@ public class ClassifierInstanceValidatorTest {
                         new SupportedParameterValuesBuilder().setParameterName(new ParameterName(PARAM_NAME))
                             .setParameterType(new IntBuilder()
                                 .setSupportedIntValueInRange(ImmutableList
-                                    .of(new SupportedIntValueInRangeBuilder().setMin(0l).setMax(1000l).build()))
+                                    .of(new SupportedIntValueInRangeBuilder().setMin(0L).setMax(1000L).build()))
                                 .build())
                             .build());
     }
@@ -95,7 +95,7 @@ public class ClassifierInstanceValidatorTest {
         ClassifierInstanceBuilder ciBuilder = new ClassifierInstanceBuilder();
         ciBuilder.setName(new ClassifierName(CLASSIFIER1));
         ciBuilder.setParameterValue(ImmutableList
-            .of(new ParameterValueBuilder().setName(new ParameterName(PARAM_NAME)).setIntValue(100l).build()));
+            .of(new ParameterValueBuilder().setName(new ParameterName(PARAM_NAME)).setIntValue(100L).build()));
 
         SupportedClassifierDefinition constraint = new SupportedClassifierDefinitionBuilder()
             .setClassifierDefinitionId(cdId)
