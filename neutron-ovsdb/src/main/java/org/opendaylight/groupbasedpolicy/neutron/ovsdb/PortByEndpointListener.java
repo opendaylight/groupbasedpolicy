@@ -7,6 +7,8 @@
  */
 package org.opendaylight.groupbasedpolicy.neutron.ovsdb;
 
+import com.google.common.base.Optional;
+
 import java.util.List;
 
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
@@ -35,8 +37,6 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.google.common.base.Optional;
 
 /**
  * Listens on PortByEndpoint created events. port-name is augmented to endpoint and endpoint-l3 (IFF

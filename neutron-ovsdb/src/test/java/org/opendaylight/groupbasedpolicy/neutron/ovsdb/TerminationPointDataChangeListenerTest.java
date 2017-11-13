@@ -87,12 +87,6 @@ public class TerminationPointDataChangeListenerTest {
         when(dataBroker.registerDataTreeChangeListener(any(DataTreeIdentifier.class),
                         any(DataTreeChangeListener.class))).thenReturn(registration);
 
-        InstanceIdentifier<OvsdbTerminationPointAugmentation> ovsdbTpIid = InstanceIdentifier.create(
-                NetworkTopology.class)
-            .child(Topology.class, new TopologyKey(SouthboundConstants.OVSDB_TOPOLOGY_ID))
-            .child(Node.class)
-            .child(TerminationPoint.class)
-            .augmentation(OvsdbTerminationPointAugmentation.class);
         ovsdbTp = mock(OvsdbTerminationPointAugmentation.class);
         when(ovsdbTp.getInterfaceType()).thenReturn((Class) Object.class);
         InterfaceExternalIds externalId = mock(InterfaceExternalIds.class);
@@ -172,6 +166,13 @@ public class TerminationPointDataChangeListenerTest {
                 mock(DataTreeModification.class);
         mockModification = mock(DataObjectModification.class);
         doReturn(mockModification).when(mockDataTreeModification).getRootNode();
+
+        InstanceIdentifier<OvsdbTerminationPointAugmentation> ovsdbTpIid = InstanceIdentifier.create(
+            NetworkTopology.class)
+            .child(Topology.class, new TopologyKey(SouthboundConstants.OVSDB_TOPOLOGY_ID))
+            .child(Node.class)
+            .child(TerminationPoint.class)
+            .augmentation(OvsdbTerminationPointAugmentation.class);
         doReturn(new DataTreeIdentifier<>(LogicalDatastoreType.OPERATIONAL, ovsdbTpIid))
                 .when(mockDataTreeModification).getRootPath();
         changeEvent = Collections.singletonList(mockDataTreeModification);

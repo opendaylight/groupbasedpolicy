@@ -40,16 +40,17 @@ public abstract class AbstractTunnelType {
         return Collections.unmodifiableList(options);
     }
 
-    protected boolean hasTunnelOptions(OvsdbTerminationPointAugmentation tpAugmentation, Map<String, String> optionsMap) {
+    protected boolean hasTunnelOptions(OvsdbTerminationPointAugmentation tpAugmentation,
+        Map<String, String> optionsMap) {
 
         Map<String, String> foundOpts = new HashMap<String, String>();
         List<Options> options = tpAugmentation.getOptions();
         if (options != null) {
             for (Options opt : options) {
                 // skip invalid options
-                if (opt.getOption() == null || opt.getValue() == null)
+                if (opt.getOption() == null || opt.getValue() == null) {
                     continue;
-
+                }
                 if (optionsMap.containsKey(opt.getOption()) && optionsMap.get(opt.getOption()).equals(opt.getValue())) {
                     foundOpts.put(opt.getOption(), opt.getValue());
                 }
@@ -75,14 +76,14 @@ public abstract class AbstractTunnelType {
     }
 
     /**
-     * Return the list of {@link Options} valid for this tunnel type
+     * Return the list of {@link Options} valid for this tunnel type.
      *
      * @return list of {@link Options} for the tunnel, null if not supported
      */
     public abstract List<Options> getOptions();
 
     /**
-     * Check if a TerminationPoint is a tunnel port that meets
+     * Check if a TerminationPoint is a tunnel port that meets.
      * requirements
      *
      * @param tpAugmentation the {@link OvsdbTerminationPointAugmentation}
@@ -106,7 +107,7 @@ public abstract class AbstractTunnelType {
     public abstract PortNumber getPortNumber();
 
     /**
-     * Get the prefix used to create the tunnel name for any tunnels of this type
+     * Get the prefix used to create the tunnel name for any tunnels of this type.
      *
      * @return The tunnel prefix
      */

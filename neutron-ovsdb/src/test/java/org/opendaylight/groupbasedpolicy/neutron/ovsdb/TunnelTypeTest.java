@@ -46,47 +46,38 @@ public class TunnelTypeTest {
 
     private List<Options> nshOptions = null;
     private List<Options> ofOverlayOptions = null;
-    @Before
-    public void setUp() throws Exception {
+
+    @Before public void setUp() throws Exception {
         nshOptions = new ArrayList<Options>();
         ofOverlayOptions = new ArrayList<Options>();
         OptionsBuilder ob = new OptionsBuilder();
-        ob.setOption(VNID_KEY)
-          .setValue(VNID_VALUE);
+        ob.setOption(VNID_KEY).setValue(VNID_VALUE);
         nshOptions.add(ob.build());
         ofOverlayOptions.add(ob.build());
         ob = new OptionsBuilder();
-        ob.setOption(REMOTE_IP_KEY)
-          .setValue(REMOTE_IP_VALUE);
+        ob.setOption(REMOTE_IP_KEY).setValue(REMOTE_IP_VALUE);
         nshOptions.add(ob.build());
         ofOverlayOptions.add(ob.build());
         ob = new OptionsBuilder();
-        ob.setOption(NSH_NSI_KEY)
-          .setValue(NSH_NSI_VALUE);
+        ob.setOption(NSH_NSI_KEY).setValue(NSH_NSI_VALUE);
         nshOptions.add(ob.build());
         ob = new OptionsBuilder();
-        ob.setOption(NSH_NSP_KEY)
-          .setValue(NSH_NSP_VALUE);
+        ob.setOption(NSH_NSP_KEY).setValue(NSH_NSP_VALUE);
         nshOptions.add(ob.build());
         ob = new OptionsBuilder();
-        ob.setOption(NSH_NSHC1_KEY)
-          .setValue(NSH_NSHC1_VALUE);
+        ob.setOption(NSH_NSHC1_KEY).setValue(NSH_NSHC1_VALUE);
         nshOptions.add(ob.build());
         ob = new OptionsBuilder();
-        ob.setOption(NSH_NSHC2_KEY)
-          .setValue(NSH_NSHC2_VALUE);
+        ob.setOption(NSH_NSHC2_KEY).setValue(NSH_NSHC2_VALUE);
         nshOptions.add(ob.build());
         ob = new OptionsBuilder();
-        ob.setOption(NSH_NSHC3_KEY)
-          .setValue(NSH_NSHC3_VALUE);
+        ob.setOption(NSH_NSHC3_KEY).setValue(NSH_NSHC3_VALUE);
         nshOptions.add(ob.build());
         ob = new OptionsBuilder();
-        ob.setOption(NSH_NSHC4_KEY)
-          .setValue(NSH_NSHC4_VALUE);
+        ob.setOption(NSH_NSHC4_KEY).setValue(NSH_NSHC4_VALUE);
         nshOptions.add(ob.build());
         ob = new OptionsBuilder();
-        ob.setOption(DESTPORT_KEY)
-          .setValue(DESTPORT_VALUE);
+        ob.setOption(DESTPORT_KEY).setValue(DESTPORT_VALUE);
         nshOptions.add(ob.build());
     }
 

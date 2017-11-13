@@ -64,6 +64,7 @@ public class NeutronOvsdbIidFactory {
         return topologyIid(ovsdbTopologyId).child(Node.class, new NodeKey(nodeId));
     }
 
+    @SuppressWarnings("checkstyle:LineLength") // Longer lines in this method are caused by long package names.
     public static InstanceIdentifier<org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.nodes.Node> nodeIid(
             org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeId nodeId) {
         return InstanceIdentifier.builder(Nodes.class)

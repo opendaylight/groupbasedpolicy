@@ -31,6 +31,8 @@ public class NeutronOvsdb implements AutoCloseable {
     }
 
     /**
+     * Used to properly close running instance.
+     *
      * @see java.lang.AutoCloseable#close()
      */
     @Override

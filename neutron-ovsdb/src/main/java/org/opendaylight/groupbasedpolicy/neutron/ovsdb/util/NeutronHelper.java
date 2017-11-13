@@ -10,6 +10,8 @@ package org.opendaylight.groupbasedpolicy.neutron.ovsdb.util;
 
 import static org.opendaylight.groupbasedpolicy.util.DataStoreHelper.readFromDs;
 
+import com.google.common.base.Optional;
+
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
@@ -22,13 +24,11 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.neutron.gb
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.neutron.gbp.mapper.rev150513.mappings.gbp.by.neutron.mappings.endpoints.by.ports.EndpointByPortKey;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 
-import com.google.common.base.Optional;
-
 public class NeutronHelper {
 
     /**
      * This looks up the Endpoint L2 key from an
-     * operational data store kept in neutron-mapper
+     * operational data store kept in neutron-mapper.
      *
      * @param externalId The neutron port UUID
      * @param dataBroker {@link DataBroker} to use for the transaction

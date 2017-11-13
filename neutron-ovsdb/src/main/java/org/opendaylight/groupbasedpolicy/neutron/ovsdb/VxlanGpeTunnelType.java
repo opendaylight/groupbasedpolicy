@@ -42,14 +42,15 @@ public class VxlanGpeTunnelType extends AbstractTunnelType {
 
     private final PortNumber udpTunnelPort;
     private final List<Options> optionsList;
-    private static final Class<? extends TunnelTypeBase> tunnelType = TunnelTypeVxlanGpe.class;
+    private static final Class<? extends TunnelTypeBase> TUNNEL_TYPE_VXLAN_GPE = TunnelTypeVxlanGpe.class;
 
     public VxlanGpeTunnelType() {
-        optionsList = createOptionsList(optsMap);
+        optionsList = createOptionsList(OPTS_MAP);
         udpTunnelPort = new PortNumber(VXLAN_GPE_PORT_NUMBER);
     }
 
-    private static final Map<String, String> optsMap;
+    private static final Map<String, String> OPTS_MAP;
+
     static {
         Map<String, String> opts = new HashMap<String, String>();
         opts.put(VNID_KEY, VNID_VALUE);
@@ -61,7 +62,7 @@ public class VxlanGpeTunnelType extends AbstractTunnelType {
         opts.put(NSH_NSHC3_KEY, NSH_NSHC3_VALUE);
         opts.put(NSH_NSHC4_KEY, NSH_NSHC4_VALUE);
         opts.put(DESTPORT_KEY, DESTPORT_VALUE);
-        optsMap = Collections.unmodifiableMap(opts);
+        OPTS_MAP = Collections.unmodifiableMap(opts);
     }
 
     @Override
@@ -71,7 +72,7 @@ public class VxlanGpeTunnelType extends AbstractTunnelType {
 
     @Override
     public Class<? extends TunnelTypeBase> getTunnelType() {
-        return tunnelType;
+        return TUNNEL_TYPE_VXLAN_GPE;
     }
 
     @Override
@@ -96,7 +97,7 @@ public class VxlanGpeTunnelType extends AbstractTunnelType {
      */
     @Override
     public boolean isValidTunnelPort(OvsdbTerminationPointAugmentation tpAugmentation) {
-        if (hasTunnelOptions(tpAugmentation, optsMap)
+        if (hasTunnelOptions(tpAugmentation, OPTS_MAP)
                 && InterfaceTypeVxlan.class.equals(tpAugmentation.getInterfaceType())
                 && getDestPort(tpAugmentation).equals(VXLAN_GPE_PORT_NUMBER.toString())) {
             return true;

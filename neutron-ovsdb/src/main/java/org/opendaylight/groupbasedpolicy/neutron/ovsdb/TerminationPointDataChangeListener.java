@@ -29,6 +29,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.DataObjectModification;
 import org.opendaylight.controller.md.sal.binding.api.DataTreeChangeListener;
@@ -97,7 +98,7 @@ public class TerminationPointDataChangeListener implements DataTreeChangeListene
      * When vSwitch is deleted, we loose data in operational DS to determine Iid of
      * corresponding NodeId.
      */
-    private static final Map<InstanceIdentifier<OvsdbTerminationPointAugmentation>, NodeId> nodeIdByTerminPoint =
+    private static final Map<InstanceIdentifier<OvsdbTerminationPointAugmentation>, NodeId> NODE_ID_BY_TERMIN_POINT =
             new HashMap<>();
 
     @Override
@@ -112,14 +113,14 @@ public class TerminationPointDataChangeListener implements DataTreeChangeListene
                     OvsdbTerminationPointAugmentation updatedOvsdbTp = rootNode.getDataAfter();
                     OvsdbBridgeAugmentation ovsdbBridge = getOvsdbBridgeFromTerminationPoint(ovsdbTpIid, dataBroker);
                     if (origOvsdbTp == null) {
-                        nodeIdByTerminPoint.put(ovsdbTpIid,
+                        NODE_ID_BY_TERMIN_POINT.put(ovsdbTpIid,
                                 new NodeId(getInventoryNodeIdString(ovsdbBridge, ovsdbTpIid, dataBroker)));
                     }
 
                     processOvsdbBridge(ovsdbBridge, updatedOvsdbTp, ovsdbTpIid);
                     break;
                 case DELETE:
-                    processRemovedTp(nodeIdByTerminPoint.get(ovsdbTpIid), origOvsdbTp, ovsdbTpIid);
+                    processRemovedTp(NODE_ID_BY_TERMIN_POINT.get(ovsdbTpIid), origOvsdbTp, ovsdbTpIid);
                     break;
                 default:
                     break;
@@ -173,9 +174,8 @@ public class TerminationPointDataChangeListener implements DataTreeChangeListene
             ReadOnlyTransaction transaction = dataBroker.newReadOnlyTransaction();
             ep = lookupEndpoint(epKey, transaction);
             if (ep == null) {
-                LOG.warn(
-                        "TerminationPoint {} with external ID {} is in Neutron Map, but corresponding Endpoint {} isn't in Endpoint Repository",
-                        ovsdbTp, externalId, epKey);
+                LOG.warn("TerminationPoint {} with external ID {} is in Neutron Map, "
+                    + "but corresponding Endpoint {} isn't in Endpoint Repository", ovsdbTp, externalId, epKey);
                 return;
             }
             /*
@@ -215,8 +215,8 @@ public class TerminationPointDataChangeListener implements DataTreeChangeListene
 
     /**
      * If removed termination point was a tunnel port,
-     * removes attached tunnels (namely Vxlan-type) from OVSDB bridge;
-     * else removes location info from TP
+     * removes attached tunnels (namely Vxlan-type) from OVSDB bridge,
+     * else removes location info from TP.
      *
      * @param nodeId {@link NodeId}
      * @param ovsdbTp {@link OvsdbTerminationPointAugmentation}
@@ -232,7 +232,7 @@ public class TerminationPointDataChangeListener implements DataTreeChangeListene
     }
 
     /**
-     * Delete location on EP for given TP
+     * Delete location on EP for given TP.
      *
      * @param ovsdbTp {@link OvsdbTerminationPointAugmentation}
      */
@@ -248,9 +248,8 @@ public class TerminationPointDataChangeListener implements DataTreeChangeListene
             Endpoint ep = lookupEndpoint(epKey, readOnlyTransaction);
             readOnlyTransaction.close();
             if (ep == null) {
-                LOG.warn(
-                        "TerminationPoint {} with external ID {} is in Neutron Map, but corresponding Endpoint {} isn't in Endpoint Repository.",
-                        ovsdbTp, externalId, epKey);
+                LOG.warn("TerminationPoint {} with external ID {} is in Neutron Map,"
+                    + " but corresponding Endpoint {} isn't in Endpoint Repository.", ovsdbTp, externalId, epKey);
                 return;
             }
             updateEndpointRemoveLocation(ep, dataBroker.newReadWriteTransaction());

@@ -57,7 +57,8 @@ public class NeutronOvsdbIidFactoryTest {
         InstanceIdentifier<ExternalGatewayAsL3Endpoint> iid =
                 NeutronOvsdbIidFactory.neutronGbpExternalGatewayIidWildcard();
         assertNotNull(iid);
-        Class<?>[] expectedTypes = {Mappings.class, NeutronByGbpMappings.class, ExternalGatewaysAsL3Endpoints.class,
+        Class<?>[] expectedTypes =
+            {Mappings.class, NeutronByGbpMappings.class, ExternalGatewaysAsL3Endpoints.class,
                 ExternalGatewayAsL3Endpoint.class};
         assertPathArgumentTypes(iid.getPathArguments(), expectedTypes);
         assertEquals(ExternalGatewayAsL3Endpoint.class, iid.getTargetType());
@@ -70,7 +71,7 @@ public class NeutronOvsdbIidFactoryTest {
         InstanceIdentifier<EndpointByPort> iid = NeutronOvsdbIidFactory.endpointByPortIid(new UniqueId(portId));
         assertNotNull(iid);
         Class<?>[] expectedTypes =
-                {Mappings.class, GbpByNeutronMappings.class, EndpointsByPorts.class, EndpointByPort.class};
+            {Mappings.class, GbpByNeutronMappings.class, EndpointsByPorts.class, EndpointByPort.class};
         assertPathArgumentTypes(iid.getPathArguments(), expectedTypes);
         assertEquals(EndpointByPort.class, iid.getTargetType());
         assertFalse(iid.isWildcarded());
@@ -81,7 +82,7 @@ public class NeutronOvsdbIidFactoryTest {
     public void test_NeutronGbpMappingsIidWildcard() {
         InstanceIdentifier<NeutronByGbpMappings> iid = NeutronOvsdbIidFactory.neutronGbpMappingsIidWildcard();
         assertNotNull(iid);
-        
+
         Class<?>[] expectedTypes = {Mappings.class, NeutronByGbpMappings.class};
         assertPathArgumentTypes(iid.getPathArguments(), expectedTypes);
         assertEquals(NeutronByGbpMappings.class, iid.getTargetType());
@@ -107,7 +108,7 @@ public class NeutronOvsdbIidFactoryTest {
                 NeutronOvsdbIidFactory.nodeIid(nodeId);
         assertNotNull(iid);
         Class<?>[] expectedTypes =
-                {Nodes.class, org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.nodes.Node.class};
+            {Nodes.class, org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.nodes.Node.class};
         assertPathArgumentTypes(iid.getPathArguments(), expectedTypes);
         assertEquals(org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.nodes.Node.class,
                 iid.getTargetType());

@@ -11,6 +11,8 @@ package org.opendaylight.groupbasedpolicy.neutron.ovsdb.util;
 import static org.opendaylight.groupbasedpolicy.util.DataStoreHelper.readFromDs;
 import static org.opendaylight.groupbasedpolicy.util.DataStoreHelper.submitToDs;
 
+import com.google.common.base.Optional;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -42,15 +44,13 @@ import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.base.Optional;
-
 public class OvsdbHelper {
     private static final Logger LOG = LoggerFactory.getLogger(OvsdbHelper.class);
     private static final String OF_PORT = "6653";
 
     /**
      * Look up the {@link OvsdbBridgeAugmentation} from the data store
-     * given a child {@link InstanceIdentifier} of {@link OvsdbTerminationPointAugmentation}
+     * given a child {@link InstanceIdentifier} of {@link OvsdbTerminationPointAugmentation}.
      *
      * @param tpIid The InstanceIdentifier for a child TerminationPoint augmentation
      * @param dataBroker the {@link DataBroker}
@@ -60,7 +60,8 @@ public class OvsdbHelper {
             InstanceIdentifier<OvsdbTerminationPointAugmentation> tpIid, DataBroker dataBroker) {
         InstanceIdentifier<Node> nodeIid = tpIid.firstIdentifierOf(Node.class);
         if (nodeIid != null) {
-            InstanceIdentifier<OvsdbBridgeAugmentation> ovsdbBridgeIid = nodeIid.augmentation(OvsdbBridgeAugmentation.class);
+            InstanceIdentifier<OvsdbBridgeAugmentation>
+                ovsdbBridgeIid = nodeIid.augmentation(OvsdbBridgeAugmentation.class);
             if (ovsdbBridgeIid != null) {
                 ReadTransaction transaction = dataBroker.newReadOnlyTransaction();
                 Optional<OvsdbBridgeAugmentation> ovsdbBridge =
@@ -76,11 +77,10 @@ public class OvsdbHelper {
     public static Node getNodeFromBridgeRef(OvsdbBridgeRef bridgeRef, DataBroker dataBroker) {
         InstanceIdentifier<Node> nodeIid = bridgeRef.getValue().firstIdentifierOf(Node.class);
         ReadTransaction transaction = dataBroker.newReadOnlyTransaction();
-        Optional<?> node =
-                readFromDs(LogicalDatastoreType.OPERATIONAL, nodeIid, transaction );
+        Optional<?> node = readFromDs(LogicalDatastoreType.OPERATIONAL, nodeIid, transaction);
         if (node.isPresent()) {
             if (node.get() instanceof Node) {
-                return (Node)node.get();
+                return (Node) node.get();
             }
         }
         return null;
@@ -89,8 +89,8 @@ public class OvsdbHelper {
     public static OvsdbTerminationPointAugmentation getOvsdbTerminationPoint(
             InstanceIdentifier<OvsdbTerminationPointAugmentation> tpIid, DataBroker dataBroker) {
         ReadTransaction transaction = dataBroker.newReadOnlyTransaction();
-        Optional<OvsdbTerminationPointAugmentation> ovsdbTp =
-                readFromDs(LogicalDatastoreType.OPERATIONAL, tpIid, transaction );
+        Optional<OvsdbTerminationPointAugmentation>
+            ovsdbTp = readFromDs(LogicalDatastoreType.OPERATIONAL, tpIid, transaction);
         if (ovsdbTp.isPresent()) {
             return ovsdbTp.get();
         }
@@ -137,8 +137,8 @@ public class OvsdbHelper {
         return tunnelType.getTunnelPrefix() + bridge.getBridgeName().getValue();
     }
 
-    public static OvsdbTerminationPointAugmentation buildOvsdbTerminationPointAugmentation(OvsdbBridgeAugmentation bridge,
-            List<Options> options, AbstractTunnelType tunnelType) {
+    public static OvsdbTerminationPointAugmentation buildOvsdbTerminationPointAugmentation(
+            OvsdbBridgeAugmentation bridge, List<Options> options, AbstractTunnelType tunnelType) {
         OvsdbTerminationPointAugmentationBuilder ovsdbTpBuilder = new OvsdbTerminationPointAugmentationBuilder();
         ovsdbTpBuilder.setName(generateTpName(bridge, tunnelType));
         ovsdbTpBuilder.setOptions(options);
@@ -182,7 +182,7 @@ public class OvsdbHelper {
     }
 
     /**
-     * Get the manager node for this bridge node
+     * Get the manager node for this bridge node.
      *
      * @param bridge the bridge node
      * @param dataBroker the {@link DataBroker}
@@ -191,19 +191,19 @@ public class OvsdbHelper {
      */
     public static OvsdbNodeAugmentation getManagerNode(OvsdbBridgeAugmentation bridge, DataBroker dataBroker) {
         OvsdbNodeRef bareIId = bridge.getManagedBy();
-        if(bareIId != null) {
-            if(bareIId.getValue().getTargetType().equals(Node.class)) {
+        if (bareIId != null) {
+            if (bareIId.getValue().getTargetType().equals(Node.class)) {
                 ReadWriteTransaction transaction = dataBroker.newReadWriteTransaction();
                 InstanceIdentifier<Node> iid = (InstanceIdentifier<Node>) bareIId.getValue();
                 Optional<Node> nodeOptional = readFromDs(LogicalDatastoreType.OPERATIONAL, iid, transaction);
-                if(nodeOptional.isPresent()
-                        && nodeOptional.get().getAugmentation(OvsdbNodeAugmentation.class) != null) {
+                if (nodeOptional.isPresent()
+                    && nodeOptional.get().getAugmentation(OvsdbNodeAugmentation.class) != null) {
                     return nodeOptional.get().getAugmentation(OvsdbNodeAugmentation.class);
                 } else {
-                    LOG.warn("Could not find ovsdb-node for connection for {}",bridge);
+                    LOG.warn("Could not find ovsdb-node for connection for {}", bridge);
                 }
             } else {
-                LOG.warn("Bridge 'managedBy' non-ovsdb-node.  bridge {} getManagedBy() {}",bridge,bareIId.getValue());
+                LOG.warn("Bridge 'managedBy' non-ovsdb-node.  bridge {} getManagedBy() {}", bridge, bareIId.getValue());
             }
         } else {
             LOG.debug("Bridge 'managedBy' is null.  bridge {}",bridge);
@@ -213,8 +213,7 @@ public class OvsdbHelper {
 
     public static Node getTopologyNode(InstanceIdentifier<Node> nodeIid, DataBroker dataBroker) {
         ReadTransaction transaction = dataBroker.newReadOnlyTransaction();
-        Optional<Node> nodeOptional =
-                readFromDs(LogicalDatastoreType.OPERATIONAL, nodeIid, transaction );
+        Optional<Node> nodeOptional = readFromDs(LogicalDatastoreType.OPERATIONAL, nodeIid, transaction);
         if (nodeOptional.isPresent()) {
             return nodeOptional.get();
         }
@@ -232,7 +231,6 @@ public class OvsdbHelper {
      */
     public static void createTunnelPort(InstanceIdentifier<Node> nodeIid,
             Node node, AbstractTunnelType tunnelType, DataBroker dataBroker) {
-        ReadWriteTransaction transaction = dataBroker.newReadWriteTransaction();
         OvsdbBridgeAugmentation bridge = node.getAugmentation(OvsdbBridgeAugmentation.class);
         if (bridge == null) {
             LOG.warn("No OvsdbBridgeAugmentationfor Node {}", node);
@@ -240,20 +238,19 @@ public class OvsdbHelper {
         }
 
         OvsdbNodeAugmentation managerNode = getManagerNode(bridge, dataBroker);
-        if(managerNode == null) {
+        if (managerNode == null) {
             LOG.warn("Couldn't create tunnel port for Node {}, no manager", node);
             return;
         }
         List<Options> options = tunnelType.getOptions();
-        OvsdbTerminationPointAugmentation ovsdbTp =
-                buildOvsdbTerminationPointAugmentation(bridge,options, tunnelType);
+        OvsdbTerminationPointAugmentation ovsdbTp = buildOvsdbTerminationPointAugmentation(bridge, options, tunnelType);
         List<TerminationPoint> tps = buildTerminationPoints(bridge,ovsdbTp, tunnelType);
-        OvsdbBridgeAugmentation ovsdbBridgeAugmentation =
-                buildOvsdbBridgeAugmentation(bridge,managerNode);
+        OvsdbBridgeAugmentation ovsdbBridgeAugmentation = buildOvsdbBridgeAugmentation(bridge,managerNode);
         Node configNode = getNode(node, tps,ovsdbBridgeAugmentation);
         LOG.info("About to write nodeId {} node {}",nodeIid,configNode);
-        transaction.merge(LogicalDatastoreType.CONFIGURATION, nodeIid, configNode);
-        submitToDs(transaction);
+        ReadWriteTransaction rwTx = dataBroker.newReadWriteTransaction();
+        rwTx.merge(LogicalDatastoreType.CONFIGURATION, nodeIid, configNode);
+        submitToDs(rwTx);
     }
 
 

@@ -15,12 +15,13 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.opendaylight.groupbasedpolicy.neutron.ovsdb.OvsdbNodeListener.BRIDGE_SEPARATOR;
 
-import java.util.Collection;
-import java.util.HashSet;
-
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.CheckedFuture;
+
+import java.util.Collection;
+import java.util.HashSet;
+
 import org.junit.Before;
 import org.junit.Test;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
@@ -66,9 +67,9 @@ import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 public class OvsdbNodeListenerTest {
 
     private static final String OVSDB_BRIDGE_NAME = "ovsdbBridgeName";
-    private static final String NODE_ID = "nodeId";
-    private static final NodeId nodeId = new NodeId(NODE_ID);
-    private static final TopologyId topologyId = new TopologyId("topologyId");
+    private static final String NODE_ID_STIRNG = "nodeId";
+    private static final NodeId NODE_ID = new NodeId(NODE_ID_STIRNG);
+    private static final TopologyId TOPOLOGY_ID = new TopologyId("topologyId");
 
     private DataBroker dataBroker;
     private IntegrationBridgeSetting integrationBridgeSetting;
@@ -79,7 +80,7 @@ public class OvsdbNodeListenerTest {
     private ImmutableSet<DataTreeModification<Node>> changes;
     private Node nodeBefore;
     private Node nodeAfter;
-    private WriteTransaction wTx;
+    private WriteTransaction writeTx;
     private InstanceIdentifier<Node> bridgeNodeIid;
     private Node bridge;
 
@@ -94,7 +95,7 @@ public class OvsdbNodeListenerTest {
                 .build();
 
         rootNode = mock(DataObjectModification.class);
-        rootIdentifier = NeutronOvsdbIidFactory.nodeIid(topologyId, nodeId);
+        rootIdentifier = NeutronOvsdbIidFactory.nodeIid(TOPOLOGY_ID, NODE_ID);
 
         DataTreeIdentifier<Node> rootPath =
             new DataTreeIdentifier<>(LogicalDatastoreType.CONFIGURATION, rootIdentifier);
@@ -106,7 +107,7 @@ public class OvsdbNodeListenerTest {
         changes = ImmutableSet.of(change);
 
         bridgeNodeIid = NeutronOvsdbIidFactory.nodeIid(
-            rootIdentifier.firstKeyOf(Topology.class).getTopologyId(), nodeId);
+            rootIdentifier.firstKeyOf(Topology.class).getTopologyId(), NODE_ID);
 
         ManagerEntry managerEntry = new ManagerEntryBuilder()
             .setTarget(new Uri("something:192.168.50.9:1234"))
@@ -138,15 +139,15 @@ public class OvsdbNodeListenerTest {
             .addAugmentation(OvsdbNodeAugmentation.class, ovsdbNode)
             .addAugmentation(OvsdbBridgeAugmentation.class, ovsdbBridge).build();
 
-        wTx = mock(WriteTransaction.class);
-        when(dataBroker.newWriteOnlyTransaction()).thenReturn(wTx);
+        writeTx = mock(WriteTransaction.class);
+        when(dataBroker.newWriteOnlyTransaction()).thenReturn(writeTx);
 
         DataObjectModification<OvsdbNodeAugmentation> modifiedOvsdbNode = mock(DataObjectModification.class);
         DataObjectModification<OpenvswitchOtherConfigs> ovsOtherConfigModification = mock(DataObjectModification.class);
 
         OpenvswitchOtherConfigs newConfig = new OpenvswitchOtherConfigsBuilder()
             .setOtherConfigKey(OvsdbNodeListener.NEUTRON_PROVIDER_MAPPINGS_KEY)
-            .setOtherConfigValue("otherConfigValue:" + NODE_ID)
+            .setOtherConfigValue("otherConfigValue:" + NODE_ID_STIRNG)
             .build();
         when(ovsOtherConfigModification.getDataBefore()).thenReturn(null);
         when(ovsOtherConfigModification.getDataAfter()).thenReturn(newConfig);
@@ -161,9 +162,9 @@ public class OvsdbNodeListenerTest {
         bridge = new NodeBuilder()
             .setNodeId(nodeId)
             .build();
-        //doNothing().when(wTx).merge(LogicalDatastoreType.CONFIGURATION, bridgeNodeIid, bridge, true);
+        //doNothing().when(writeTx).merge(LogicalDatastoreType.CONFIGURATION, bridgeNodeIid, bridge, true);
         CheckedFuture<Void, TransactionCommitFailedException> fut = mock(CheckedFuture.class);
-        when(wTx.submit()).thenReturn(fut);
+        when(writeTx.submit()).thenReturn(fut);
 
         OvsdbTerminationPointAugmentation ovsdbTerminationPointAugmentation =
             new OvsdbTerminationPointAugmentationBuilder().build();
@@ -173,7 +174,7 @@ public class OvsdbNodeListenerTest {
             mock(DataObjectModification.class);
 
         OvsdbTerminationPointAugmentation newOvsdbTp = new OvsdbTerminationPointAugmentationBuilder()
-            .setName(NODE_ID)
+            .setName(NODE_ID_STIRNG)
             .setOfport(1234L)
             .build();
         when(modifiedOvsdbTerminationPointAugmentation.getDataAfter()).thenReturn(newOvsdbTp);
@@ -199,7 +200,8 @@ public class OvsdbNodeListenerTest {
 
         listener.onDataTreeChanged(changes);
 
-        verify(wTx).merge(eq(LogicalDatastoreType.CONFIGURATION), any(InstanceIdentifier.class), any(Node.class), eq(true));
+        verify(writeTx).merge(eq(LogicalDatastoreType.CONFIGURATION), any(InstanceIdentifier.class), any(Node.class),
+            eq(true));
     }
 
     @Test

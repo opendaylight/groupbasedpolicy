@@ -7,6 +7,8 @@
  */
 package org.opendaylight.groupbasedpolicy.neutron.ovsdb;
 
+import com.google.common.base.Strings;
+
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.DataObjectModification;
 import org.opendaylight.controller.md.sal.binding.api.DataTreeIdentifier;
@@ -27,8 +29,6 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.google.common.base.Strings;
 
 public class ProviderPhysicalNetworkListener extends DataTreeChangeHandler<ProviderPhysicalNetworkAsL2FloodDomain> {
 
@@ -89,10 +89,10 @@ public class ProviderPhysicalNetworkListener extends DataTreeChangeHandler<Provi
             try {
                 Segmentation segmentation =
                         new SegmentationBuilder().setSegmentationId(Integer.valueOf(segmentationId)).build();
-                WriteTransaction wTx = dataProvider.newWriteOnlyTransaction();
-                wTx.merge(LogicalDatastoreType.CONFIGURATION,
+                WriteTransaction writeTx = dataProvider.newWriteOnlyTransaction();
+                writeTx.merge(LogicalDatastoreType.CONFIGURATION,
                         IidFactory.l2FloodDomainIid(tenantId, l2FdId).augmentation(Segmentation.class), segmentation);
-                DataStoreHelper.submitToDs(wTx);
+                DataStoreHelper.submitToDs(writeTx);
             } catch (NumberFormatException e) {
                 LOG.info("Segmentation ID of Neutron Provider Physical Network {} is not a number but is {}.",
                         l2FdId.getValue(), segmentationId);

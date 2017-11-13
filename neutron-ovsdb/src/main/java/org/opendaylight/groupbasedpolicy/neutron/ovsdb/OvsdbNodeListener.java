@@ -7,15 +7,6 @@
  */
 package org.opendaylight.groupbasedpolicy.neutron.ovsdb;
 
-import javax.annotation.Nonnull;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
-
-
 import com.google.common.base.Function;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
@@ -23,6 +14,15 @@ import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.MoreExecutors;
+
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+
+import javax.annotation.Nonnull;
 
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.DataObjectModification;
@@ -92,7 +92,8 @@ public class OvsdbNodeListener extends DataTreeChangeHandler<Node> {
         OvsdbNodeAugmentation ovsdbNode = node.getAugmentation(OvsdbNodeAugmentation.class);
         if (ovsdbNode != null) {
             LOG.trace("OVSDB node created: {} \n {}", rootIdentifier, node);
-            DataObjectModification<OpenvswitchOtherConfigs> ovsOtherConfigModification = getProviderMappingsModification(rootNode);
+            DataObjectModification<OpenvswitchOtherConfigs>
+                ovsOtherConfigModification = getProviderMappingsModification(rootNode);
             boolean integrationBridgePresent = false;
             if (isProviderPortNameChanged(ovsOtherConfigModification) && ovsdbNode.getManagedNodeEntry() != null) {
                 String newProviderPortName = getProviderPortName(ovsOtherConfigModification.getDataAfter());
@@ -103,7 +104,8 @@ public class OvsdbNodeListener extends DataTreeChangeHandler<Node> {
                     LOG.trace("Added Provider port name {} by OVSDB bridge ref {}", newProviderPortName,
                             mngdNodeEntry.getBridgeRef());
                     NodeKey managedNodeKey = bridgeRef.getValue().firstKeyOf(Node.class);
-                    if (intBrSettings != null && managedNodeKey.getNodeId().getValue().equals(intBrSettings.getName())) {
+                    if (intBrSettings != null && managedNodeKey.getNodeId().getValue()
+                        .equals(intBrSettings.getName())) {
                         integrationBridgePresent = true;
                     }
                 }
@@ -113,9 +115,9 @@ public class OvsdbNodeListener extends DataTreeChangeHandler<Node> {
                         managerToControllerEntries(ovsdbNode.getManagerEntry()), intBrSettings.getName());
                 InstanceIdentifier<Node> bridgeNodeIid = NeutronOvsdbIidFactory.nodeIid(
                         rootIdentifier.firstKeyOf(Topology.class).getTopologyId(), bridge.getNodeId());
-                WriteTransaction wTx = dataProvider.newWriteOnlyTransaction();
-                wTx.merge(LogicalDatastoreType.CONFIGURATION, bridgeNodeIid, bridge, true);
-                Futures.addCallback(wTx.submit(), new FutureCallback<Void>() {
+                WriteTransaction writeTx = dataProvider.newWriteOnlyTransaction();
+                writeTx.merge(LogicalDatastoreType.CONFIGURATION, bridgeNodeIid, bridge, true);
+                Futures.addCallback(writeTx.submit(), new FutureCallback<Void>() {
 
                     @Override
                     public void onSuccess(Void result) {
@@ -123,9 +125,9 @@ public class OvsdbNodeListener extends DataTreeChangeHandler<Node> {
                     }
 
                     @Override
-                    public void onFailure(Throwable t) {
+                    public void onFailure(Throwable throwable) {
                         LOG.error("Failed to write bridge {}. Message: {}" + bridge.getNodeId().getValue(),
-                                t.getMessage());
+                                throwable.getMessage());
                     }
                 }, MoreExecutors.directExecutor());
             }
@@ -331,7 +333,7 @@ public class OvsdbNodeListener extends DataTreeChangeHandler<Node> {
     }
 
     /**
-     * Extracts IP address from URI
+     * Extracts IP address from URI.
      *
      * @param uri in format protocol:ip:port
      * @return IPv4 or IPv6 address as {@link String}.

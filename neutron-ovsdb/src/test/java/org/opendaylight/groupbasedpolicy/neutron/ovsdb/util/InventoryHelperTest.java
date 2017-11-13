@@ -18,10 +18,11 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import java.util.Collections;
-
 import com.google.common.base.Optional;
 import com.google.common.util.concurrent.CheckedFuture;
+
+import java.util.Collections;
+
 import org.junit.Before;
 import org.junit.Test;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
@@ -325,8 +326,6 @@ public class InventoryHelperTest {
     @SuppressWarnings({"unchecked", "rawtypes"})
     @Test
     public void testUpdateOfOverlayConfig() throws Exception {
-        IpAddress ip = mock(IpAddress.class);
-        String nodeConnectorIdString = "nodeConnectorIdString";
         AbstractTunnelType tunnelType = mock(AbstractTunnelType.class);
 
         when(writeTransaction.read(any(LogicalDatastoreType.class), any(InstanceIdentifier.class)))
@@ -344,6 +343,8 @@ public class InventoryHelperTest {
         CheckedFuture<Void, TransactionCommitFailedException> submitFuture = mock(CheckedFuture.class);
         when(writeTransaction.submit()).thenReturn(submitFuture);
 
+        IpAddress ip = mock(IpAddress.class);
+        String nodeConnectorIdString = "nodeConnectorIdString";
         InventoryHelper.updateOfOverlayConfig(ip, nodeIdString, nodeConnectorIdString, tunnelType, dataBroker);
         verify(writeTransaction).submit();
     }
@@ -363,10 +364,6 @@ public class InventoryHelperTest {
     @SuppressWarnings("unchecked")
     @Test
     public void testUpdateOfOverlayConfig_OfConfigNull() throws Exception {
-        IpAddress ip = mock(IpAddress.class);
-        String nodeConnectorIdString = "nodeConnectorIdString";
-        AbstractTunnelType tunnelType = mock(AbstractTunnelType.class);
-
         when(writeTransaction.read(any(LogicalDatastoreType.class), any(InstanceIdentifier.class)))
             .thenReturn(nodeConfigFuture);
         when(nodeConfigOptional.isPresent()).thenReturn(false);
@@ -374,6 +371,9 @@ public class InventoryHelperTest {
         CheckedFuture<Void, TransactionCommitFailedException> submitFuture = mock(CheckedFuture.class);
         when(writeTransaction.submit()).thenReturn(submitFuture);
 
+        IpAddress ip = mock(IpAddress.class);
+        String nodeConnectorIdString = "nodeConnectorIdString";
+        AbstractTunnelType tunnelType = mock(AbstractTunnelType.class);
         InventoryHelper.updateOfOverlayConfig(ip, nodeIdString, nodeConnectorIdString, tunnelType, dataBroker);
         verify(writeTransaction).submit();
     }

@@ -10,6 +10,8 @@ package org.opendaylight.groupbasedpolicy.neutron.ovsdb.util;
 import static org.opendaylight.groupbasedpolicy.util.DataStoreHelper.readFromDs;
 import static org.opendaylight.groupbasedpolicy.util.IidFactory.endpointIid;
 
+import com.google.common.base.Optional;
+
 import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
 import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
@@ -23,8 +25,6 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeConnectorId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeId;
 
-import com.google.common.base.Optional;
-
 
 public class EndpointHelper {
 
@@ -37,7 +37,9 @@ public class EndpointHelper {
      */
     public static Endpoint lookupEndpoint(EndpointKey epKey, ReadOnlyTransaction transaction) {
 
-        Optional<Endpoint> optionalEp = readFromDs(LogicalDatastoreType.OPERATIONAL, endpointIid(epKey.getL2Context(),epKey.getMacAddress()), transaction );
+        Optional<Endpoint> optionalEp =
+            readFromDs(LogicalDatastoreType.OPERATIONAL, endpointIid(epKey.getL2Context(), epKey.getMacAddress()),
+                transaction);
         if (optionalEp.isPresent()) {
             return optionalEp.get();
         }
@@ -46,7 +48,6 @@ public class EndpointHelper {
 
     /**
      * Updates an {@link Endpoint} location based on OVSDB Termination point notification.
-     *
      * Note this updates the datastore directly. It does not use the Endpoint RPC, as this has
      * unfortunate side-effects on EndpointL3 augmentations.
      *
@@ -70,7 +71,8 @@ public class EndpointHelper {
         EndpointBuilder epBuilder = new EndpointBuilder(endpoint);
         Endpoint newEp = epBuilder.build();
         epBuilder.removeAugmentation(OfOverlayContext.class);
-        rwTx.put(LogicalDatastoreType.OPERATIONAL, IidFactory.endpointIid(newEp.getL2Context(), newEp.getMacAddress()), newEp);
+        rwTx.put(LogicalDatastoreType.OPERATIONAL, IidFactory.endpointIid(newEp.getL2Context(), newEp.getMacAddress()),
+            newEp);
         DataStoreHelper.submitToDs(rwTx);
     }
 
