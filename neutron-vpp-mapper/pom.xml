@@ -11,20 +11,20 @@
   <parent>
     <groupId>org.opendaylight.mdsal</groupId>
     <artifactId>binding-parent</artifactId>
-    <version>0.11.1-SNAPSHOT</version>
+    <version>0.11.1</version>
     <relativePath/>
   </parent>
 
   <groupId>org.opendaylight.groupbasedpolicy</groupId>
   <artifactId>neutron-vpp-mapper</artifactId>
-  <version>0.6.1-SNAPSHOT</version>
+  <version>0.6.1</version>
   <packaging>bundle</packaging>
   <!-- <name> formatting is used by autorelease to parse and notify projects on
        build failure. Please do not modify this unless you have a good reason. -->
   <name>ODL :: groupbasedpolicy :: ${project.artifactId}</name>
 
   <properties>
-    <neutron.version>0.9.1-SNAPSHOT</neutron.version>
+    <neutron.version>0.9.1</neutron.version>
   </properties>
 
   <dependencyManagement>
@@ -32,7 +32,7 @@
       <dependency>
         <groupId>org.opendaylight.controller</groupId>
         <artifactId>mdsal-artifacts</artifactId>
-        <version>1.6.1-SNAPSHOT</version>
+        <version>1.6.1</version>
         <type>pom</type>
         <scope>import</scope>
       </dependency>

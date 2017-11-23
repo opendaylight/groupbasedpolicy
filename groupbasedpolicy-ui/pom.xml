@@ -16,7 +16,7 @@
        build failure. Please do not modify this unless you have a good reason. -->
   <name>ODL :: groupbasedpolicy :: ${project.artifactId}</name>
   <description>Resources</description>
-  <version>0.6.1-SNAPSHOT</version>
+  <version>0.6.1</version>
   <packaging>pom</packaging>
 
   <prerequisites>

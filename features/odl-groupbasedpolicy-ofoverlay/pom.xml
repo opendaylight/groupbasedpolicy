@@ -12,7 +12,7 @@
 
     <groupId>org.opendaylight.groupbasedpolicy</groupId>
     <artifactId>odl-groupbasedpolicy-ofoverlay</artifactId>
-    <version>0.6.1-SNAPSHOT</version>
+    <version>0.6.1</version>
     <packaging>feature</packaging>
     <!--
         The OpenFlow Overlay renderer.
@@ -25,9 +25,9 @@
     <name>ODL :: groupbasedpolicy :: ${project.artifactId}</name>
 
     <properties>
-        <openflowplugin.version>0.5.1-SNAPSHOT</openflowplugin.version>
-        <ovsdb.southbound.version>1.5.1-SNAPSHOT</ovsdb.southbound.version>
-        <sfc.version>0.6.1-SNAPSHOT</sfc.version>
+        <openflowplugin.version>0.5.1</openflowplugin.version>
+        <ovsdb.southbound.version>1.5.1</ovsdb.southbound.version>
+        <sfc.version>0.6.1</sfc.version>
     </properties>
 
     <dependencyManagement>
