@@ -41,7 +41,7 @@
             <!-- ODL-AAA-ARTIFACTS -->
             <dependency>
                 <groupId>org.opendaylight.aaa</groupId>
-                <artifactId>features-aaa-shiro</artifactId>
+                <artifactId>features-aaa</artifactId>
                 <version>${aaa.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
