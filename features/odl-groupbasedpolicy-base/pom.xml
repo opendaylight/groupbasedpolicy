@@ -12,7 +12,7 @@
 
     <groupId>org.opendaylight.groupbasedpolicy</groupId>
     <artifactId>odl-groupbasedpolicy-base</artifactId>
-    <version>0.6.1-SNAPSHOT</version>
+    <version>0.6.2-SNAPSHOT</version>
     <packaging>feature</packaging>
 
     <!-- <name> formatting is used by autorelease to parse and notify projects on
@@ -20,10 +20,10 @@
     <name>ODL :: groupbasedpolicy :: ${project.artifactId}</name>
 
     <properties>
-        <config.version>0.7.1-SNAPSHOT</config.version>
-        <controller.mdsal.version>1.6.1-SNAPSHOT</controller.mdsal.version>
-        <mdsal.binding.base.model>0.11.1-SNAPSHOT</mdsal.binding.base.model>
-        <mdsal.binding.base>2.3.1-SNAPSHOT</mdsal.binding.base>
+        <config.version>0.7.2-SNAPSHOT</config.version>
+        <controller.mdsal.version>1.6.2-SNAPSHOT</controller.mdsal.version>
+        <mdsal.binding.base.model>0.11.2-SNAPSHOT</mdsal.binding.base.model>
+        <mdsal.binding.base>2.3.2-SNAPSHOT</mdsal.binding.base>
         <config.configfile.directory>etc/opendaylight/karaf</config.configfile.directory>
     </properties>
 
